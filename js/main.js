@@ -14,7 +14,7 @@ const SENSOR_CONFIG = {
 // 2. 전역 설정 및 상태 관리
 // ==========================================
 const CONFIG = {
-  API_BASE_URL: 'https://elect-victory-closest-dee.trycloudflare.com',
+  API_BASE_URL: 'https://creator-turns-tail-carriers.trycloudflare.com',
   ALARM_DURATION_SEC: 5,
   POLLING_INTERVAL_MS: 5000,
   EXCLUDED_ALERT_TYPES: ['GAS']
@@ -137,7 +137,7 @@ async function fetchSensorData() {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
-        'ngrok-skip-browser-warning': 'true'
+        'bypass-tunnel-reminder': 'true' // <-- Cloudflare 우회 필수 헤더로 변경!
       },
       body: JSON.stringify({ range: STATE.currentRangeMode })
     });
@@ -647,7 +647,9 @@ async function handleExcelDownload() {
   
   try {
     const response = await fetch(downloadUrl, {
-      headers: { 'ngrok-skip-browser-warning': 'true' }
+      headers: { 
+        'bypass-tunnel-reminder': 'true' // <-- Cloudflare 우회 필수 헤더로 변경!
+      }
     });
     if (!response.ok) throw new Error('다운로드 실패');
     
