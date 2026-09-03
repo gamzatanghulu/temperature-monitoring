@@ -508,19 +508,24 @@ cloudflared tunnel --url http://localhost:3000
 
 ### 통합 관제 대시보드
 
-![Temperature Dashboard](screenshots/dashboard.png)
+<img width="1887" height="527" alt="image" src="https://github.com/user-attachments/assets/a5d05ceb-6fa8-4af1-8656-9750574137d2" />
+
 
 ### 온도 / 습도 차트
 
-![Temperature Chart](screenshots/temperature-chart.png)
+<img width="1883" height="359" alt="image" src="https://github.com/user-attachments/assets/690810a0-80b4-4f86-9af8-4be3d36e984a" />
+
 
 ### 가스 용기 모니터링
 
-![Gas Monitoring](screenshots/gas-monitoring.png)
+<img width="476" height="88" alt="image" src="https://github.com/user-attachments/assets/0ac9d725-aefd-45b4-9142-2d3c6120b411" />
+
 
 ### Excel 리포트
 
-![Excel Report](screenshots/excel-report.png)
+<img width="404" height="239" alt="image" src="https://github.com/user-attachments/assets/aaacc743-09f8-459f-9031-bf8f0dcf50cd" />
+<img width="1420" height="539" alt="image" src="https://github.com/user-attachments/assets/2b0e2479-dae9-412d-9780-990e58058ab8" />
+
 
 ---
 
@@ -571,7 +576,3 @@ SMTP 인증 정보
 * [ ] WebSocket 기반 실시간 데이터 전송
 
 ---
-
-## 📄 License
-
-This project is for educational and portfolio purposes.
