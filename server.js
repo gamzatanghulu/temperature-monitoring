@@ -15,14 +15,14 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors({
-  origin: '*', // 모든 도메인 허용 (또는 'https://gamzatanghulu.github.io' 지정 가능)
+  origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'bypass-tunnel-reminder', 'ngrok-skip-browser-warning'],
   credentials: true
 }));
 
 // OPTIONS Preflight 요청 사전 승인 처리
-app.options('*', cors());
+app.options(/(.*)/, cors());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
