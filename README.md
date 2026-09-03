@@ -504,7 +504,6 @@ cloudflared tunnel --url http://localhost:3000
 
 ## 📸 주요 화면
 
-> 실제 프로젝트 화면 캡처를 `screenshots/` 폴더에 추가하여 README에서 보여줄 수 있습니다.
 
 ### 통합 관제 대시보드
 
