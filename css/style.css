@@ -28,6 +28,7 @@ html, body {
   overflow: hidden;
 }
 
+/* Layout Structure */
 .dashboard {
   width: 100%;
   height: 100%;
@@ -36,7 +37,6 @@ html, body {
   gap: 8px;
 }
 
-/* 상단 헤더 */
 .header {
   background: var(--bg-card);
   padding: 8px 14px;
@@ -109,10 +109,11 @@ html, body {
 
 .update-badge span {
   color: #38bdf8;
-  font-weight: bold;
+  font-weight: 700;
   font-family: 'Consolas', monospace;
 }
 
+/* Controls & Buttons */
 .btn-stop-alarm {
   display: none;
   background: #dc2626;
@@ -128,8 +129,14 @@ html, body {
 }
 
 @keyframes pulse-btn {
-  from { background-color: #dc2626; transform: scale(1); }
-  to { background-color: #991b1b; transform: scale(1.05); }
+  from {
+    background-color: #dc2626;
+    transform: scale(1);
+  }
+  to {
+    background-color: #991b1b;
+    transform: scale(1.05);
+  }
 }
 
 .range-toggle-group {
@@ -179,7 +186,10 @@ html, body {
   outline: none;
 }
 
-.date-separator { color: #64748b; font-size: 10px; }
+.date-separator {
+  color: #64748b;
+  font-size: 10px;
+}
 
 .btn-excel {
   background: #16a34a;
@@ -192,7 +202,7 @@ html, body {
   font-weight: 600;
 }
 
-/* 상단 레이아웃 (가스 2개 + 모니터링 카드가 한 줄에 위치) */
+/* Overview Section */
 .top-overview-row {
   display: flex;
   gap: 8px;
@@ -213,7 +223,7 @@ html, body {
   display: flex;
   align-items: center;
   gap: 10px;
-  min-width: 230px; /* 기존보다 너비를 넓혀 상세 정보 수용력 확보 */
+  min-width: 230px;
 }
 
 .gas-tank-visual {
@@ -224,7 +234,7 @@ html, body {
 
 .tank-cap {
   background: #22c55e;
-  color: #000;
+  color: #000000;
   font-size: 8.5px;
   font-weight: 800;
   padding: 1px 5px;
@@ -234,10 +244,9 @@ html, body {
 
 .tank-cap.ln2-cap {
   background: #3b82f6;
-  color: #fff;
+  color: #ffffff;
 }
 
-/* 탱크 크기 확대 */
 .tank-body {
   width: 32px;
   height: 48px;
@@ -258,17 +267,23 @@ html, body {
   right: 0;
 }
 
-.lco2-fill { background: rgba(239, 68, 68, 0.45); border-top: 2px solid #ef4444; }
-.ln2-fill { background: rgba(59, 130, 246, 0.45); border-top: 2px solid #3b82f6; }
+.lco2-fill {
+  background: rgba(239, 68, 68, 0.45);
+  border-top: 2px solid #ef4444;
+}
 
-/* 퍼센트 글씨 크기 대폭 확대 */
+.ln2-fill {
+  background: rgba(59, 130, 246, 0.45);
+  border-top: 2px solid #3b82f6;
+}
+
 .tank-percent {
   position: relative;
   z-index: 2;
   font-size: 11px;
   font-weight: 900;
-  color: #fff;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
 }
 
 .gas-details {
@@ -294,14 +309,14 @@ html, body {
   color: #4ade80;
   border: 1px solid rgba(34, 197, 94, 0.3);
   font-size: 8.5px;
-  padding: 0px 4px;
+  padding: 0 4px;
   border-radius: 3px;
 }
 
 .gas-sub-info {
   display: flex;
   flex-direction: column;
-  font-size: 10.5px; /* 잔량/용량 텍스트 크기 확대 */
+  font-size: 10.5px;
   color: #cbd5e1;
   gap: 2px;
 }
@@ -310,10 +325,16 @@ html, body {
   font-family: 'Consolas', monospace;
 }
 
-.highlight-red { color: #f87171; font-weight: 700; }
-.highlight-purple { color: #c084fc; font-weight: 700; }
+.highlight-red {
+  color: #f87171;
+  font-weight: 700;
+}
 
-/* 요약 관제 카드 그리드 */
+.highlight-purple {
+  color: #c084fc;
+  font-weight: 700;
+}
+
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -336,16 +357,35 @@ html, body {
 .stat-card.freezer { border-left-color: var(--color-freezer); }
 .stat-card.outdoor { border-left-color: var(--color-outdoor); }
 
-.stat-info { display: flex; flex-direction: column; gap: 2px; }
-.stat-label { font-size: 11px; color: var(--text-secondary); font-weight: 600; }
-.stat-subtext { font-size: 9.5px; color: #64748b; }
-.stat-value { font-size: 17px; font-weight: 700; font-family: 'Consolas', monospace; color: #ffffff; }
+.stat-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.stat-subtext {
+  font-size: 9.5px;
+  color: #64748b;
+}
+
+.stat-value {
+  font-size: 17px;
+  font-weight: 700;
+  font-family: 'Consolas', monospace;
+  color: #ffffff;
+}
 
 .stat-ref-color { color: var(--color-ref); }
 .stat-freezer-color { color: var(--color-freezer); }
 .stat-outdoor-color { color: var(--color-outdoor); }
 
-/* 경고 배너 */
+/* Alerts */
 .alert-banner {
   display: none;
   background: #7f1d1d;
@@ -360,10 +400,19 @@ html, body {
   flex-shrink: 0;
 }
 
-.alert-banner.active { display: flex; }
-.btn-close-alert { background: none; border: none; color: inherit; cursor: pointer; font-size: 11px; }
+.alert-banner.active {
+  display: flex;
+}
 
-/* 메인 그리드 (온·습도 관제 영역) */
+.btn-close-alert {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+/* Monitoring Grid */
 .main-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -392,12 +441,35 @@ html, body {
   flex-shrink: 0;
 }
 
-.panel-title { font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 6px; color: #fff; }
-.badge-cat { padding: 2px 5px; border-radius: 4px; font-size: 10px; color: #fff; font-weight: 700; }
-.badge-cat.ref { background: var(--color-ref); color: #000; }
+.panel-title {
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #ffffff;
+}
+
+.badge-cat {
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-size: 10px;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.badge-cat.ref {
+  background: var(--color-ref);
+  color: #000000;
+}
+
 .badge-cat.freezer { background: var(--color-freezer); }
 .badge-cat.outdoor { background: var(--color-outdoor); }
-.range-header-text { font-size: 11px; color: var(--text-secondary); }
+
+.range-header-text {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
 
 .table-headers {
   display: grid;
@@ -437,18 +509,77 @@ html, body {
   flex-shrink: 0;
 }
 
-.sensor-tile.status-ok { border-left-color: var(--status-ok); }
-.sensor-tile.status-warn { border-left-color: var(--status-warn); background-color: #2a1215; animation: blink-bg 1.5s infinite alternate; }
+.sensor-tile.status-ok {
+  border-left-color: var(--status-ok);
+}
 
-.tile-info { display: flex; flex-direction: column; gap: 1px; overflow: hidden; }
-.tile-zone { font-size: 9px; color: var(--text-secondary); white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
-.tile-name { font-size: 11px; color: #fff; font-weight: 700; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
-.tile-temp-group { display: flex; flex-direction: column; justify-content: center; }
-.tile-temp-wrapper { display: flex; align-items: baseline; gap: 1px; }
-.tile-temp { font-size: 13px; font-weight: 700; font-family: 'Consolas', monospace; color: #fff; }
-.tile-temp-unit { font-size: 10px; color: #cbd5e1; }
-.tile-feels { font-size: 9px; color: #f87171; white-space: nowrap; }
-.tile-hum { font-size: 11px; font-weight: 700; color: var(--color-hum); font-family: 'Consolas', monospace; text-align: center; }
+.sensor-tile.status-warn {
+  border-left-color: var(--status-warn);
+  background-color: #2a1215;
+  animation: blink-bg 1.5s infinite alternate;
+}
+
+.tile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow: hidden;
+}
+
+.tile-zone {
+  font-size: 9px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.tile-name {
+  font-size: 11px;
+  color: #ffffff;
+  font-weight: 700;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.tile-temp-group {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.tile-temp-wrapper {
+  display: flex;
+  align-items: baseline;
+  gap: 1px;
+}
+
+.tile-temp {
+  font-size: 13px;
+  font-weight: 700;
+  font-family: 'Consolas', monospace;
+  color: #ffffff;
+}
+
+.tile-temp-unit {
+  font-size: 10px;
+  color: #cbd5e1;
+}
+
+.tile-feels {
+  font-size: 9px;
+  color: #f87171;
+  white-space: nowrap;
+}
+
+.tile-hum {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-hum);
+  font-family: 'Consolas', monospace;
+  text-align: center;
+}
 
 .minichart-wrapper {
   width: 100%;
@@ -465,35 +596,154 @@ html, body {
   height: 100% !important;
 }
 
-/* 모달 */
-.modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75); z-index: 9999; align-items: center; justify-content: center; }
-.modal-box { background: #151d2a; width: 90%; max-width: 380px; border-radius: 8px; padding: 16px; border: 1px solid var(--border); box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
-.modal-box h3 { margin: 0 0 6px 0; font-size: 14px; color: #fff; }
-.modal-desc { margin: 0 0 12px 0; font-size: 11px; color: var(--text-secondary); }
-.modal-detail { background: #0f172a; border: 1px solid #1e293b; border-radius: 6px; padding: 10px; margin-bottom: 12px; font-size: 11px; line-height: 1.5; }
-.modal-row { display: flex; justify-content: space-between; }
-.modal-confirm-text { margin: 0 0 12px 0; font-size: 11px; color: #cbd5e1; text-align: center; }
-.modal-btn-group { display: flex; gap: 8px; }
-.btn-modal-confirm { flex: 1; padding: 8px 0; border-radius: 5px; border: none; background: #16a34a; color: #fff; font-size: 11px; font-weight: 700; cursor: pointer; }
-.btn-modal-cancel { flex: 1; padding: 8px 0; border-radius: 5px; border: 1px solid #334155; background: #1e293b; color: #94a3b8; font-size: 11px; font-weight: 700; cursor: pointer; }
+/* Modals */
+.modal-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+}
 
-::-webkit-scrollbar { width: 4px; }
-::-webkit-scrollbar-track { background: var(--bg-main); }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+.modal-box {
+  background: #151d2a;
+  width: 90%;
+  max-width: 380px;
+  border-radius: 8px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+}
 
+.modal-box h3 {
+  margin-bottom: 6px;
+  font-size: 14px;
+  color: #ffffff;
+}
+
+.modal-desc {
+  margin-bottom: 12px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.modal-detail {
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  border-radius: 6px;
+  padding: 10px;
+  margin-bottom: 12px;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.modal-row {
+  display: flex;
+  justify-content: space-between;
+}
+
+.modal-confirm-text {
+  margin-bottom: 12px;
+  font-size: 11px;
+  color: #cbd5e1;
+  text-align: center;
+}
+
+.modal-btn-group {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-modal-confirm {
+  flex: 1;
+  padding: 8px 0;
+  border-radius: 5px;
+  border: none;
+  background: #16a34a;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-modal-cancel {
+  flex: 1;
+  padding: 8px 0;
+  border-radius: 5px;
+  border: 1px solid #334155;
+  background: #1e293b;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Utilities */
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-main);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+/* Media Queries */
 @media (max-width: 1024px) {
-  .top-overview-row { flex-direction: column; }
-  .gas-compact-container { width: 100%; justify-content: space-between; }
-  .gas-card-compact { flex: 1; }
+  .top-overview-row {
+    flex-direction: column;
+  }
+  .gas-compact-container {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .gas-card-compact {
+    flex: 1;
+  }
 }
 
 @media (max-width: 768px) {
-  html, body { height: auto; overflow-y: auto; padding: 8px; }
-  .header { flex-direction: column; align-items: flex-start; gap: 10px; }
-  .status-panel { width: 100%; justify-content: flex-start; }
-  .summary-grid { grid-template-columns: repeat(2, 1fr); gap: 6px; }
-  .main-grid { grid-template-columns: 1fr; gap: 12px; height: auto; }
-  .excel-control-box { width: 100%; justify-content: space-between; margin-top: 4px; }
-  .table-headers, .sensor-tile { grid-template-columns: 75px 55px 45px 1fr; gap: 4px; padding: 4px; }
-  .minichart-wrapper { height: 50px; }
+  html, body {
+    height: auto;
+    overflow-y: auto;
+    padding: 8px;
+  }
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .status-panel {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+  .main-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    height: auto;
+  }
+  .excel-control-box {
+    width: 100%;
+    justify-content: space-between;
+    margin-top: 4px;
+  }
+  .table-headers,
+  .sensor-tile {
+    grid-template-columns: 75px 55px 45px 1fr;
+    gap: 4px;
+    padding: 4px;
+  }
+  .minichart-wrapper {
+    height: 50px;
+  }
 }

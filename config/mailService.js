@@ -2,6 +2,7 @@ const nodemailer = require('nodemailer');
 const path = require('path');
 const { RECEIVER_TO, RECEIVER_CC } = require('./sensorConfig');
 
+// SMTP 메일 트랜스포터 설정
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || 'smtp.gmail.com',
   port: parseInt(process.env.SMTP_PORT || '587'),
@@ -12,49 +13,66 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-async function sendEmailNotification({ items, emailType = 'ALERT', isTest = false }) {
-  const nowStr = new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
-
-  let alertCategoryTitle = "긴급 온도/가스 경고";
-  let headerBg = "#dc2626";
-  let headerStatusBadge = "CRITICAL ALERT";
-
+// 메일 제목 및 헤더 스타일 매핑
+function getEmailHeaderConfig(emailType, isTest, items) {
   if (isTest) {
-    alertCategoryTitle = "통합 관제 시스템 연동 확인";
-    headerBg = "#2563eb";
-    headerStatusBadge = "SYSTEM TEST";
-  } else if (emailType === 'RECOVERY') {
-    alertCategoryTitle = "안전한 상태로 복구되었습니다";
-    headerBg = "#059669";
-    headerStatusBadge = "STATUS RECOVERED";
-  } else if (items.length > 0) {
-    const types = items.map(i => i.type);
-    if (types.includes('GAS')) {
-      alertCategoryTitle = "탄산/질소 고압용기 잔량/압력 이상 경보";
-      headerBg = "#7c3aed";
-      headerStatusBadge = "GAS TANK ALERT";
-    } else if (types.includes('OUTDOOR')) {
-      alertCategoryTitle = "폭염 / 온열질환 위험 경보 (체감온도 초과)";
-      headerBg = "#ea580c";
-      headerStatusBadge = "HEAT WAVE ALERT";
-    } else if (types.includes('FREEZING')) {
-      alertCategoryTitle = "냉동창고 긴급 온도 이상";
-      headerBg = "#4f46e5";
-      headerStatusBadge = "FREEZER ALERT";
-    } else if (types.includes('COOLING')) {
-      alertCategoryTitle = "냉장창고 긴급 온도 이상";
-      headerBg = "#0284c7";
-      headerStatusBadge = "COOLING ALERT";
-    }
+    return { title: '통합 관제 시스템 연동 확인', bg: '#2563eb', badge: 'SYSTEM TEST' };
+  }
+  if (emailType === 'RECOVERY') {
+    return { title: '안전한 상태로 복구되었습니다', bg: '#059669', badge: 'STATUS RECOVERED' };
   }
 
-  const subject = isTest
-    ? `[시스템 테스트] 통합 관제 시스템 연결 확인`
-    : `[${alertCategoryTitle}] 관제 시스템 리포트 (${nowStr})`;
+  const firstType = items[0]?.type;
+  switch (firstType) {
+    case 'GAS':
+      return { title: '탄산/질소 고압용기 잔량/압력 이상 경보', bg: '#7c3aed', badge: 'GAS TANK ALERT' };
+    case 'OUTDOOR':
+      return { title: '폭염 / 온열질환 위험 경보 (체감온도 초과)', bg: '#ea580c', badge: 'HEAT WAVE ALERT' };
+    case 'FREEZING':
+      return { title: '냉동창고 긴급 온도 이상', bg: '#4f46e5', badge: 'FREEZER ALERT' };
+    case 'COOLING':
+      return { title: '냉장창고 긴급 온도 이상', bg: '#0284c7', badge: 'COOLING ALERT' };
+    default:
+      return { title: '긴급 온도/가스 경고', bg: '#dc2626', badge: 'CRITICAL ALERT' };
+  }
+}
 
-  let rowsHtml = '';
-  if (isTest) {
-    rowsHtml = `
+// 측정치 표기 HTML 생성
+function renderTempDisplay(item, isRecovery) {
+  const color = isRecovery ? '#059669' : '#dc2626';
+
+  if (item.type === 'GAS') {
+    return `<div style="font-size: 15px; font-weight: 800; color: ${color}; font-family: 'Consolas', monospace;">${item.temp} MPa</div>`;
+  }
+
+  if (item.type === 'OUTDOOR') {
+    return `
+      <div style="font-size: 15px; font-weight: 800; color: ${color}; font-family: 'Consolas', monospace;">
+        ${item.temp}℃ <span style="font-size: 12px; color: #64748b; font-weight: 400;">(${item.hum}%)</span>
+      </div>
+      <div style="margin-top: 4px;">
+        <span style="display: inline-block; padding: 2px 8px; background-color: ${isRecovery ? '#ecfdf5' : '#fef2f2'}; color: ${color}; border: 1px solid ${isRecovery ? '#a7f3d0' : '#fecaca'}; border-radius: 6px; font-size: 11px; font-weight: 700;">
+          체감 ${item.feelsLike}℃
+        </span>
+      </div>`;
+  }
+
+  return `
+    <div style="font-size: 15px; font-weight: 800; color: ${color}; font-family: 'Consolas', monospace;">${item.temp}℃</div>
+    <div style="font-size: 12px; color: #64748b; margin-top: 2px;">습도 ${item.hum}%</div>`;
+}
+
+// 관제 알림 이메일 발송
+async function sendEmailNotification({ items = [], emailType = 'ALERT', isTest = false }) {
+  const nowStr = new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
+  const header = getEmailHeaderConfig(emailType, isTest, items);
+  
+  const subject = isTest
+    ? '[시스템 테스트] 통합 관제 시스템 연결 확인'
+    : `[${header.title}] 관제 시스템 리포트 (${nowStr})`;
+
+  const rowsHtml = isTest 
+    ? `
       <tr>
         <td style="padding: 16px 20px; font-size: 14px; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-weight: 600;">테스트 센서</td>
         <td style="padding: 16px 20px; font-size: 13px; border-bottom: 1px solid #e2e8f0; color: #64748b; text-align: center;">전체 관제 구역</td>
@@ -62,32 +80,8 @@ async function sendEmailNotification({ items, emailType = 'ALERT', isTest = fals
         <td style="padding: 16px 20px; border-bottom: 1px solid #e2e8f0; text-align: right;">
           <span style="display: inline-block; padding: 4px 10px; background-color: #dcfce7; color: #15803d; border-radius: 20px; font-size: 12px; font-weight: 700;">● 정상 연동</span>
         </td>
-      </tr>`;
-  } else {
-    rowsHtml = items.map(item => {
-      const isOutdoor = item.type === 'OUTDOOR';
-      const isGas = item.type === 'GAS';
-      const isRecovery = (emailType === 'RECOVERY');
-      const tempColor = isRecovery ? '#059669' : '#dc2626';
-
-      let tempDisplay = '';
-      if (isGas) {
-        tempDisplay = `<div style="font-size: 15px; font-weight: 800; color: ${tempColor}; font-family: 'Consolas', monospace;">${item.temp} MPa</div>`;
-      } else if (isOutdoor) {
-        tempDisplay = `<div style="font-size: 15px; font-weight: 800; color: ${tempColor}; font-family: 'Consolas', monospace;">
-             ${item.temp}℃ <span style="font-size: 12px; color: #64748b; font-weight: 400;">(${item.hum}%)</span>
-           </div>
-           <div style="margin-top: 4px;">
-             <span style="display: inline-block; padding: 2px 8px; background-color: ${isRecovery ? '#ecfdf5' : '#fef2f2'}; color: ${tempColor}; border: 1px solid ${isRecovery ? '#a7f3d0' : '#fecaca'}; border-radius: 6px; font-size: 11px; font-weight: 700;">
-               체감 ${item.feelsLike}℃
-             </span>
-           </div>`;
-      } else {
-        tempDisplay = `<div style="font-size: 15px; font-weight: 800; color: ${tempColor}; font-family: 'Consolas', monospace;">${item.temp}℃</div>
-           <div style="font-size: 12px; color: #64748b; margin-top: 2px;">습도 ${item.hum}%</div>`;
-      }
-
-      return `
+      </tr>`
+    : items.map(item => `
       <tr>
         <td style="padding: 16px 20px; border-bottom: 1px solid #f1f5f9; vertical-align: middle;">
           <div style="font-size: 14px; font-weight: 700; color: #0f172a;">${item.displayName}</div>
@@ -97,14 +91,18 @@ async function sendEmailNotification({ items, emailType = 'ALERT', isTest = fals
           <span style="font-size: 11px; font-weight: 600; color: #475569; background: #f1f5f9; padding: 4px 8px; border-radius: 6px; display: inline-block;">${item.type}</span>
         </td>
         <td style="padding: 16px 20px; border-bottom: 1px solid #f1f5f9; text-align: center; vertical-align: middle; font-size: 13px; color: #334155; font-weight: 600;">
-          ${isOutdoor ? '체감 ' : ''}${item.min} ~ ${item.max}
+          ${item.type === 'OUTDOOR' ? '체감 ' : ''}${item.min} ~ ${item.max}
         </td>
         <td style="padding: 16px 20px; border-bottom: 1px solid #f1f5f9; text-align: right; vertical-align: middle;">
-          ${tempDisplay}
+          ${renderTempDisplay(item, emailType === 'RECOVERY')}
         </td>
-      </tr>`;
-    }).join('');
-  }
+      </tr>`).join('');
+
+  const bodyDescription = isTest
+    ? '본 메일은 통합 관제 시스템의 이메일 발송 기능 테스트 메일입니다.'
+    : emailType === 'RECOVERY'
+      ? '점검 및 수리가 완료되어 센서가 안전한 정상 범위로 회복되었습니다.'
+      : '설정된 적정 범위를 이탈한 센서가 감지되었습니다. 수리 동안 추가 중복 메일은 방지됩니다.';
 
   const htmlContent = `<!DOCTYPE html>
 <html lang="ko">
@@ -116,27 +114,21 @@ async function sendEmailNotification({ items, emailType = 'ALERT', isTest = fals
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', 'Malgun Gothic', sans-serif; background-color: #f1f5f9; margin: 0; padding: 20px 10px; color: #1e293b;">
     <table align="center" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 640px; background-color: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; border-collapse: separate;">
         <tr>
-            <td style="background-color: ${headerBg}; padding: 28px 36px 32px 36px; color: #ffffff;">
+            <td style="background-color: ${header.bg}; padding: 28px 36px 32px 36px; color: #ffffff;">
                 <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 16px;">
                     <tr>
                         <td align="left" style="vertical-align: middle;">
                             <img src="cid:choheungLogo" alt="CHOHEUNG LOGO" style="display: block; max-height: 32px; width: auto; border: 0;" />
                         </td>
                         <td align="right" style="vertical-align: middle;">
-                            <span style="display: inline-block; padding: 4px 10px; background-color: #ffffff; color: ${headerBg}; border-radius: 20px; font-size: 11px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;">
-                                ${headerStatusBadge}
+                            <span style="display: inline-block; padding: 4px 10px; background-color: #ffffff; color: ${header.bg}; border-radius: 20px; font-size: 11px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;">
+                                ${header.badge}
                             </span>
                         </td>
                     </tr>
                 </table>
-                <h1 style="margin: 0; font-size: 22px; font-weight: 800; line-height: 1.3; color: #ffffff;">${alertCategoryTitle}</h1>
-                <p style="margin: 8px 0 0 0; font-size: 13px; color: #ffffff; opacity: 0.9; line-height: 1.5;">
-                    ${isTest 
-                      ? '본 메일은 통합 관제 시스템의 이메일 발송 기능 테스트 메일입니다.' 
-                      : emailType === 'RECOVERY'
-                        ? '점검 및 수리가 완료되어 센서가 안전한 정상 범위로 회복되었습니다.'
-                        : '설정된 적정 범위를 이탈한 센서가 감지되었습니다. 수리 동안 추가 중복 메일은 방지됩니다.'}
-                </p>
+                <h1 style="margin: 0; font-size: 22px; font-weight: 800; line-height: 1.3; color: #ffffff;">${header.title}</h1>
+                <p style="margin: 8px 0 0 0; font-size: 13px; color: #ffffff; opacity: 0.9; line-height: 1.5;">${bodyDescription}</p>
             </td>
         </tr>
         <tr>
@@ -171,23 +163,19 @@ async function sendEmailNotification({ items, emailType = 'ALERT', isTest = fals
 </html>`;
 
   try {
-    const mailOptions = {
+    const info = await transporter.sendMail({
       from: process.env.SMTP_USER || '"스마트관제" <no-reply@choheung.co.kr>',
       to: RECEIVER_TO,
       cc: RECEIVER_CC,
-      subject: subject,
+      subject,
       html: htmlContent,
-      attachments: [
-        {
-          filename: 'choheung_logo.png',
-          path: path.join(__dirname, '../choheung_logo.png'),
-          cid: 'choheungLogo'
-        }
-      ]
-    };
+      attachments: [{
+        filename: 'choheung_logo.png',
+        path: path.join(__dirname, '../choheung_logo.png'),
+        cid: 'choheungLogo'
+      }]
+    });
 
-    const info = await transporter.sendMail(mailOptions);
-    console.log(`[이메일] ${subject} 전송 완료 (${info.messageId})`);
     return true;
   } catch (err) {
     console.error('[이메일 오류] 전송 실패:', err);

@@ -3,7 +3,6 @@ const cors = require('cors');
 const axios = require('axios');
 const https = require('https');
 
-// 루트 디렉토리에서 config 폴더 내 파일들을 불러오므로 ./config/파일명 으로 연결
 const { HASH_KEY, FETCH_INTERVAL_MS, SENSOR_CONFIG } = require('./config/sensorConfig');
 const { initDbPool, createTableIfNotExists, saveSensorDataToOracle, loadInitialHistoryFromOracle } = require('./config/db');
 const { calculateFeelsLikeTemp } = require('./config/calc');
@@ -21,7 +20,6 @@ app.use(cors({
   credentials: true
 }));
 
-// OPTIONS Preflight 요청 사전 승인 처리
 app.options(/(.*)/, cors());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -31,7 +29,7 @@ const axiosClient = axios.create({
   timeout: 10000
 });
 
-// 전역 상태 관리
+// 실시간 상태 캐시 변수
 const sensorStateMap = {}; 
 let sensorHistory = [];
 let cachedSensorData = {
@@ -48,13 +46,13 @@ let cachedSensorData = {
   updated_at: null
 };
 
-// API 라우터 연결 (메모리 캐시 상태 주입)
+// API 라우트 주입
 app.use('/api', createApiRouter(() => ({ cachedSensorData, sensorHistory })));
 
-// 5분 주기 통합 스크래핑 함수
+// 주기적 스크래핑 및 DB 저장
 async function fetchAndProcessData() {
   try {
-    // 1) cpSensor 온도계 수집
+    // cpSensor 센서 데이터 수집
     const response = await axiosClient.post(
       'https://cpsensor.com/pcview/users/get_monitor_thermometers.php',
       { hash_value: HASH_KEY },
@@ -68,13 +66,14 @@ async function fetchAndProcessData() {
       }
     );
 
-    // 2) 조아테크 가스 수집
+    // 조아테크 가스 수집
     const joaGasResult = await fetchJoatechGasData();
     const data = response.data;
 
     if (data && data.result_code === 0 && Array.isArray(data.name_list)) {
       const apiDataMap = {};
       
+      // cpSensor 응답 맵 구성
       data.name_list.forEach((rawName, index) => {
         const temp = parseFloat(data.data_list_1[index]);
         const hum = (data.data_list_2 && data.data_list_2[index] !== undefined) 
@@ -85,11 +84,46 @@ async function fetchAndProcessData() {
       let joaCo2Data = null;
       let joaN2Data = null;
 
+      // 조아테크 데이터 재계산
       if (joaGasResult) {
-        if (joaGasResult.joa_co2) joaCo2Data = joaGasResult.joa_co2;
-        if (joaGasResult.joa_n2) joaN2Data = joaGasResult.joa_n2;
-        
-        Object.keys(joaGasResult).forEach(k => { apiDataMap[k] = joaGasResult[k]; });
+        const prevCo2Weight = cachedSensorData.joa_co2?.weight ?? joaGasResult.joa_co2?.weight ?? 0;
+        const prevN2Weight = cachedSensorData.joa_n2?.weight ?? joaGasResult.joa_n2?.weight ?? 0;
+
+        if (joaGasResult.joa_co2) {
+          const currentWeight = joaGasResult.joa_co2.weight;
+          const currentPressure = joaGasResult.joa_co2.pressure;
+          const usage = Math.max(0, parseFloat((prevCo2Weight - currentWeight).toFixed(2)));
+
+          joaCo2Data = {
+            ...joaGasResult.joa_co2,
+            usage: usage
+          };
+
+          apiDataMap['joa_co2'] = {
+            temp: parseFloat(currentWeight || 0),
+            hum: parseFloat(currentPressure || 0),
+            feelsLike: usage,
+            rawGasData: joaCo2Data
+          };
+        }
+
+        if (joaGasResult.joa_n2) {
+          const currentWeight = joaGasResult.joa_n2.weight;
+          const currentPressure = joaGasResult.joa_n2.pressure;
+          const usage = Math.max(0, parseFloat((prevN2Weight - currentWeight).toFixed(2)));
+
+          joaN2Data = {
+            ...joaGasResult.joa_n2,
+            usage: usage
+          };
+
+          apiDataMap['joa_n2'] = {
+            temp: parseFloat(currentWeight || 0),
+            hum: parseFloat(currentPressure || 0),
+            feelsLike: usage,
+            rawGasData: joaN2Data
+          };
+        }
       }
 
       const filteredNames = [], filteredTemps = [], filteredHums = [], feelsLikeTemps = [];
@@ -102,11 +136,19 @@ async function fetchAndProcessData() {
 
         const temp = (sensorApiData && !isNaN(sensorApiData.temp)) ? sensorApiData.temp : null;
         const hum = (sensorApiData && !isNaN(sensorApiData.hum)) ? sensorApiData.hum : null;
-        const feelsLike = (temp !== null && hum !== null && cfg.type === 'OUTDOOR') 
-          ? calculateFeelsLikeTemp(temp, hum) : temp;
+        
+        let feelsLike = temp;
+        if (cfg.type === 'OUTDOOR' && temp !== null && hum !== null) {
+          feelsLike = calculateFeelsLikeTemp(temp, hum);
+        } else if (cfg.type === 'GAS') {
+          feelsLike = (sensorApiData && sensorApiData.feelsLike !== undefined) ? sensorApiData.feelsLike : 0;
+        }
 
         const targetTempForAlert = (cfg.type === 'OUTDOOR') ? feelsLike : temp;
-        const isCurrentlyWarning = (temp !== null && !isNaN(temp)) && (targetTempForAlert < cfg.min || targetTempForAlert > cfg.max);
+        
+        // 임계값 및 임계범위 상태 체크
+        const hasThresholds = (cfg.min !== undefined && cfg.max !== undefined);
+        const isCurrentlyWarning = hasThresholds && (temp !== null && !isNaN(temp)) && (targetTempForAlert < cfg.min || targetTempForAlert > cfg.max);
         const previousState = sensorStateMap[rawName] || 'NORMAL';
 
         const itemObj = { rawName, displayName: cfg.name, zone: cfg.zone, type: cfg.type, temp, feelsLike, hum, min: cfg.min, max: cfg.max };
@@ -114,9 +156,11 @@ async function fetchAndProcessData() {
         if (isCurrentlyWarning && previousState === 'NORMAL') {
           sensorStateMap[rawName] = 'WARNING';
           newlyAlertedItems.push(itemObj);
+          console.warn(`샤갈 경보 터짐: [${cfg.name}] 현재값 ${targetTempForAlert}`);
         } else if (!isCurrentlyWarning && previousState === 'WARNING') {
           sensorStateMap[rawName] = 'NORMAL';
           newlyRecoveredItems.push(itemObj);
+          console.log(`휴 살았다... 경보 해제: [${cfg.name}] 정상 복귀`);
         }
 
         if (isCurrentlyWarning) alertItems.push(itemObj);
@@ -127,12 +171,27 @@ async function fetchAndProcessData() {
         feelsLikeTemps.push(feelsLike);
         sensorConfigs.push({ ...cfg, rawName, isWarning: isCurrentlyWarning });
 
+        // 오라클 DB 보낼 배열
         if (temp !== null) {
-          itemsToSaveDb.push({ name: cfg.name || rawName, type: cfg.type, temp, hum, feelsLike });
+          itemsToSaveDb.push({ 
+            rawName, 
+            name: cfg.name || rawName, 
+            type: cfg.type, 
+            temp, 
+            hum, 
+            feelsLike 
+          });
         }
       });
 
-      if (itemsToSaveDb.length > 0) await saveSensorDataToOracle(itemsToSaveDb);
+      // 오라클 DB 저장
+      if (itemsToSaveDb.length > 0) {
+        try {
+          await saveSensorDataToOracle(itemsToSaveDb);
+        } catch (dbErr) {
+          console.error('슈발 저장실패:', dbErr.message);
+        }
+      }
 
       const currentTime = new Date().toLocaleTimeString('ko-KR', { 
         timeZone: 'Asia/Seoul', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' 
@@ -155,23 +214,29 @@ async function fetchAndProcessData() {
       sensorHistory.push({ time: currentTime, temps: filteredTemps, hums: filteredHums, feelsLikes: feelsLikeTemps });
       if (sensorHistory.length > 288) sensorHistory.shift();
 
+      // 알림 메일 발송
       if (newlyAlertedItems.length > 0) await sendEmailNotification({ items: newlyAlertedItems, emailType: 'ALERT' });
       if (newlyRecoveredItems.length > 0) await sendEmailNotification({ items: newlyRecoveredItems, emailType: 'RECOVERY' });
+      
+      console.log(`[${currentTime}] 데이터 갱신 완료 (수집 센서: ${filteredNames.length}개)`);
+    } else {
+      console.log('cpSensor 응답 이상함.. 데이터 확인 필요:', data);
     }
   } catch (error) {
-    console.error(`[오류] 데이터 수집 주기 처리 에러:`, error.message);
+    console.error('수집 뻗음ㅅㅂ :', error.message);
   }
 }
 
-// 서버 구동
+// 서버 구동 및 오라클 초기화
 app.listen(PORT, async () => {
-  console.log(`[시스템] 백엔드 관제 서버 구동 중 (PORT: ${PORT})`);
+  console.log(`서버 스타트... 포트 번호: ${PORT}`);
   try {
     await initDbPool();
     await createTableIfNotExists();
     sensorHistory = await loadInitialHistoryFromOracle();
+    console.log('로드 성공 무야호');
   } catch (err) {
-    console.error('[오류] 초기화 작업 실패:', err.message);
+    console.error('에라이 DB 초기화 망함:', err.message);
   }
 
   fetchAndProcessData();

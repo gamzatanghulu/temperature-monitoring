@@ -15,6 +15,7 @@ module.exports = {
     '13room':       { name: '외부창고', zone: '야외 현장', type: 'OUTDOOR', min: 0.0, max: 50.0, sensorId: '8629-9794' },
     '2team1':       { name: '쿠커실', zone: '현장 온열', type: 'OUTDOOR', min: 0.0, max: 36.0, sensorId: '7244-3574' },
     '2team':        { name: '유화솥', zone: '현장 온열', type: 'OUTDOOR', min: 0.0, max: 36.0, sensorId: '4289-4748' },
+    '2팀천장':        { name: '2팀천장', zone: '현장 온열', type: 'OUTDOOR', min: 0.0, max: 36.0, sensorId: '5704-7896' },
     '스마트센서':   { name: '13번창고', zone: '외부창고', type: 'COOLING', min: 0.0, max: 5.0, sensorId: '8433-5905', channel: 1 },
     'joa_co2':      { name: '탄산 고압용기', zone: '가스 저장소', type: 'GAS' },
     'joa_n2':       { name: '질소 고압용기', zone: '가스 저장소', type: 'GAS' }

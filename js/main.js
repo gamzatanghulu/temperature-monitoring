@@ -1,18 +1,15 @@
-// ==========================================
-// 1. 센서 마스터 설정 (유지보수용 메타데이터)
-// ==========================================
+// 센서 마스터 정보
 const SENSOR_CONFIG = {
   '스마트온도계': { name: '공무팀', zone: '야외 현장', type: 'OUTDOOR', min: 0.0, max: 50.0, sensorId: '6281-7088' },
   '13room':       { name: '외부창고', zone: '야외 현장', type: 'OUTDOOR', min: 0.0, max: 50.0, sensorId: '8629-9794' },
   '2team1':       { name: '쿠커실', zone: '현장 온열', type: 'OUTDOOR', min: 0.0, max: 36.0, sensorId: '7244-3574' },
   '2team':        { name: '유화솥', zone: '현장 온열', type: 'OUTDOOR', min: 0.0, max: 36.0, sensorId: '4289-4748' },
+  '2팀천장':      { name: '2팀천장', zone: '현장 온열', type: 'OUTDOOR', min: 0.0, max: 36.0, sensorId: '5704-7896' },
   '스마트센서':   { name: '13번창고', zone: '외부창고', type: 'COOLING', min: 0.0, max: 5.0, sensorId: '8433-5905' },
   '냉동센서1':    { name: '냉동 1라인', zone: 'B1 냉동동', type: 'FREEZING', min: -25.0, max: -18.0, sensorId: '' }
 };
 
-// ==========================================
-// 2. 전역 설정 및 상태 관리
-// ==========================================
+// 전역 설정
 const CONFIG = {
   API_BASE_URL: 'https://creator-turns-tail-carriers.trycloudflare.com',
   ALARM_DURATION_SEC: 5,
@@ -20,6 +17,7 @@ const CONFIG = {
   EXCLUDED_ALERT_TYPES: ['GAS']
 };
 
+// 전역 상태
 const STATE = {
   chartsMap: {},
   audioCtx: null,
@@ -34,9 +32,7 @@ const STATE = {
   pendingDownloadParams: null
 };
 
-// ==========================================
-// 3. 페이지 초기화 및 이벤트 등록
-// ==========================================
+// 페이지 초기화 및 이벤트 연결
 window.onload = () => {
   initDateInputs();
   autoRequestNotificationPermission();
@@ -47,12 +43,14 @@ window.onload = () => {
   if (confirmBtn) confirmBtn.addEventListener('click', handleExcelDownload);
 };
 
+// 웹 알림 권한 요청
 function autoRequestNotificationPermission() {
   if ("Notification" in window && Notification.permission === "default") {
     Notification.permission;
   }
 }
 
+// 오디오 컨텍스트 초기화
 function initAudioContext() {
   if (!STATE.audioCtx) {
     STATE.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -64,9 +62,7 @@ function initAudioContext() {
 window.addEventListener('click', initAudioContext, { once: true });
 window.addEventListener('touchstart', initAudioContext, { once: true });
 
-// ==========================================
-// 4. 알람 및 경고음 제어
-// ==========================================
+// 알람음 연속 재생 실행
 function startContinuousAlarm() {
   if (STATE.isSoundMutedByUser) return;
 
@@ -82,6 +78,7 @@ function startContinuousAlarm() {
   }
 }
 
+// 알람음 정지 처리
 function stopAlarmSoundOnly() {
   if (STATE.alarmIntervalId) {
     clearInterval(STATE.alarmIntervalId);
@@ -93,6 +90,7 @@ function stopAlarmSoundOnly() {
   }
 }
 
+// 사용자 알람 확인 및 음소거
 function acknowledgeAndStopSound() {
   STATE.isSoundMutedByUser = true;
   stopAlarmSoundOnly();
@@ -101,6 +99,7 @@ function acknowledgeAndStopSound() {
   if (stopBtn) stopBtn.style.display = 'none';
 }
 
+// 경고음 단일 재생
 function playSingleBeepSound() {
   initAudioContext();
   if (!STATE.audioCtx) return;
@@ -124,20 +123,18 @@ function playSingleBeepSound() {
     osc2.start(now + 1.2); 
     osc2.stop(now + 2.5);
   } catch (e) {
-    console.error("오디오 재생 오류:", e);
+    console.error("Audio play error:", e);
   }
 }
 
-// ==========================================
-// 5. API 폴링 및 대시보드 메인 렌더링
-// ==========================================
+// 센서 데이터 API 요청
 async function fetchSensorData() {
   try {
     const response = await fetch(`${CONFIG.API_BASE_URL}/api/sensor?range=${STATE.currentRangeMode}`, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
-        'bypass-tunnel-reminder': 'true' // <-- Cloudflare 우회 필수 헤더로 변경!
+        'bypass-tunnel-reminder': 'true'
       },
       body: JSON.stringify({ range: STATE.currentRangeMode })
     });
@@ -145,20 +142,20 @@ async function fetchSensorData() {
     if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
     
     const data = await response.json();
-    console.log('[DEBUG] 서버에서 받아온 전체 데이터:', data); // <-- 어디가 문제인지 추적용 console.log
 
     if (data && data.result_code === 0) {
       renderDashboard(data);
-      renderGasData(data); // <-- 가스 데이터 전용 렌더링 함수 실행
+      renderGasData(data);
     } else {
       setSyncStatus('대기 중', '#f59e0b');
     }
   } catch (e) {
-    console.error('[DEBUG] 센서 데이터 패치 실패:', e);
+    console.error("Sensor fetch error:", e);
     setSyncStatus('연결 끊김', '#ef4444');
   }
 }
 
+// 대시보드 메인 렌더링
 function renderDashboard(data) {
   setSyncStatus(data.updated_at || '--:--:--', '#38bdf8');
 
@@ -183,7 +180,6 @@ function renderDashboard(data) {
         isWarning: apiConfig.isWarning || false
       };
 
-      // GAS 센서일 경우 기존 일반 센서 타일 영역에서는 제외
       if (cfg.type === 'GAS') return;
 
       let temp = parseFloat(data.data_list_1[index]);
@@ -224,28 +220,17 @@ function renderDashboard(data) {
   showAlertBanner(validAlertItems);
 }
 
-// ==========================================
-// 5-1. 상단 고압가스(탄산, 질소) 전용 데이터 바인딩 함수
-// ==========================================
+// 가스 데이터 바인딩
 function renderGasData(data) {
-  // 백엔드에서 전달되는 조아테크 가스 데이터 객체 매칭 (joa_co2, joa_n2)
   const co2 = data.joa_co2 || null;
   const n2 = data.joa_n2 || null;
 
-  console.log('[DEBUG] 탄산(LCO2) 데이터:', co2);
-  console.log('[DEBUG] 질소(LN2) 데이터:', n2);
-
-  if (co2) {
-    updateSingleGasUI('lco2', co2);
-  }
-
-  if (n2) {
-    updateSingleGasUI('ln2', n2);
-  }
+  if (co2) updateSingleGasUI('lco2', co2);
+  if (n2) updateSingleGasUI('ln2', n2);
 }
 
+// 개별 가스 위젯 UI 업데이트
 function updateSingleGasUI(type, info) {
-  // index.html에 정의된 ID들과 정확히 대응
   const fillElem = document.getElementById(`gas-fill-${type}`);
   const pctElem = document.getElementById(`gas-pct-${type}`);
   const weightElem = document.getElementById(`gas-weight-${type}`);
@@ -258,29 +243,17 @@ function updateSingleGasUI(type, info) {
   const pressure = info.pressure ?? 0;
   const status = info.status ?? 'NORMAL';
 
-  // 1. 탱크 시각적 채움 높이 반영 (%)
-  if (fillElem) {
-    fillElem.style.height = `${Math.min(Math.max(percent, 0), 100)}%`;
-  }
+  if (fillElem) fillElem.style.height = `${Math.min(Math.max(percent, 0), 100)}%`;
+  if (pctElem) pctElem.innerText = `${percent}%`;
 
-  // 2. 퍼센트 텍스트 반영
-  if (pctElem) {
-    pctElem.innerText = `${percent}%`;
-  }
-
-  // 3. 잔량 및 최대 용량 반영 (예: "3,594 kg / 5,000 kg")
   if (weightElem) {
     const formattedWeight = Number(weight).toLocaleString();
     const formattedMax = Number(maxWeight).toLocaleString();
     weightElem.innerText = `${formattedWeight} kg / ${formattedMax} kg`;
   }
 
-  // 4. 압력 반영 (예: "16.7 bar")
-  if (pressElem) {
-    pressElem.innerText = `${pressure} bar`;
-  }
+  if (pressElem) pressElem.innerText = `${pressure} bar`;
 
-  // 5. 상태 배지 반영
   if (statusElem) {
     if (status === 'NORMAL') {
       statusElem.innerText = '정상';
@@ -292,6 +265,7 @@ function updateSingleGasUI(type, info) {
   }
 }
 
+// 센서 타일 UI 생성 및 갱신
 function renderSensorTile(index, cfg, temp, hum, feelsLike, isWarning) {
   const tempText = (temp === null) ? '--' : temp.toFixed(1);
   const humText = (hum === null) ? '--' : `${hum.toFixed(1)}%`;
@@ -335,9 +309,7 @@ function renderSensorTile(index, cfg, temp, hum, feelsLike, isWarning) {
   }
 }
 
-// ==========================================
-// 6. Chart.js 모듈
-// ==========================================
+// 미니 차트 생성 및 업데이트
 function updateOrCreateMiniChart(index, cfg, currentTemp, time, history) {
   const canvasElem = document.getElementById(`chart-canvas-${index}`);
   if (!canvasElem) return;
@@ -437,6 +409,7 @@ function updateOrCreateMiniChart(index, cfg, currentTemp, time, history) {
   });
 }
 
+// 차트 데이터 가공
 function prepareChartData(index, time, history) {
   let labels = [];
   let tempData = [];
@@ -500,9 +473,7 @@ function prepareChartData(index, time, history) {
   return { labels, tempData };
 }
 
-// ==========================================
-// 7. 경고 알림 팝업 및 처리
-// ==========================================
+// 경고 배너 제어 및 웹 알림 처리
 function showAlertBanner(items) {
   const banner = document.getElementById('alert-banner');
   if (!banner) return;
@@ -551,6 +522,7 @@ function showAlertBanner(items) {
   }
 }
 
+// 경고 닫기
 function closeAlert() {
   STATE.currentAlertKeys.forEach(key => STATE.dismissedAlertKeys.add(key));
   const banner = document.getElementById('alert-banner');
@@ -558,9 +530,7 @@ function closeAlert() {
   acknowledgeAndStopSound();
 }
 
-// ==========================================
-// 8. 엑셀 다운로드 및 기타 헬퍼
-// ==========================================
+// 차트 조회 범위 변경
 function changeChartRange(mode) {
   if (STATE.currentRangeMode === mode) return;
   STATE.currentRangeMode = mode;
@@ -579,6 +549,7 @@ function changeChartRange(mode) {
   fetchSensorData();
 }
 
+// 시간 포맷 변환
 function formatTimeLabel(timeStr) {
   if (!timeStr) return '';
   const timePart = timeStr.trim().includes(' ') ? timeStr.trim().split(' ')[1] : timeStr.trim();
@@ -586,6 +557,7 @@ function formatTimeLabel(timeStr) {
   return parts.length < 2 ? timeStr : `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
 }
 
+// 날짜 Input 초기화
 function initDateInputs() {
   const today = new Date();
   const oneMonthAgo = new Date();
@@ -597,6 +569,7 @@ function initDateInputs() {
   if (fromDateElem) fromDateElem.value = oneMonthAgo.toISOString().split('T')[0];
 }
 
+// 동기화 상태 텍스트 변경
 function setSyncStatus(text, color) {
   const syncElem = document.getElementById('update-time');
   if (syncElem) {
@@ -605,6 +578,7 @@ function setSyncStatus(text, color) {
   }
 }
 
+// 엑셀 다운로드 모달 열기
 function downloadExcelModule() {
   const typeElem = document.getElementById('csv-type');
   const fromDateElem = document.getElementById('csv-from-date');
@@ -633,12 +607,14 @@ function downloadExcelModule() {
   if (modalElem) modalElem.style.display = 'flex';
 }
 
+// 다운로드 확인 모달 닫기
 function closeConfirmModal() {
   const modalElem = document.getElementById('customConfirmModal');
   if (modalElem) modalElem.style.display = 'none';
   STATE.pendingDownloadParams = null;
 }
 
+// 엑셀 다운로드 처리
 async function handleExcelDownload() {
   if (!STATE.pendingDownloadParams) return;
 
@@ -648,10 +624,10 @@ async function handleExcelDownload() {
   try {
     const response = await fetch(downloadUrl, {
       headers: { 
-        'bypass-tunnel-reminder': 'true' // <-- Cloudflare 우회 필수 헤더로 변경!
+        'bypass-tunnel-reminder': 'true'
       }
     });
-    if (!response.ok) throw new Error('다운로드 실패');
+    if (!response.ok) throw new Error('Download failed');
     
     const blob = await response.blob();
     const url = window.URL.createObjectURL(blob);

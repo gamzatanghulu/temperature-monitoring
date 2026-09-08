@@ -1,75 +1,73 @@
 const puppeteer = require('puppeteer');
 const { JOA_CONFIG } = require('./sensorConfig');
 
-let browserInstance = null;
-
-// 브라우저 인스턴스 가져오기 (만약 닫혔거나 에러가 났으면 재생성)
-async function getBrowser() {
-  if (!browserInstance || !browserInstance.isConnected()) {
-    browserInstance = await puppeteer.launch({
-      headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--ignore-certificate-errors']
-    });
-  }
-  return browserInstance;
-}
-
+// 조아테크 가스 잔량 및 압력 데이터 수집
 async function fetchJoatechGasData() {
-  let page = null;
-  let context = null;
+  let browser = null;
+
   try {
-    const browser = await getBrowser();
-    
-    // 최신 Puppeteer 버전 호환 코드 (createBrowserContext)
-    context = await browser.createBrowserContext();
-    page = await context.newPage();
+    console.log('시작');
 
-    // User-Agent 설정 (봇 탐지 방지)
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-
-    // 1. 로그인 페이지 접속
-    await page.goto('https://www.joatech.co.kr/login', { 
-      waitUntil: 'networkidle2', 
-      timeout: 30000 
+    // Puppeteer 브라우저 인스턴스 생성
+    browser = await puppeteer.launch({
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--ignore-certificate-errors'
+      ]
     });
 
-    // 접속한 URL 확인 (이미 로그인되어 메인으로 튕겼는지 확인)
-    const currentUrl = page.url();
+    const page = await browser.newPage();
+    page.setDefaultTimeout(30000);
 
-    // 로그인 페이지에 정상 접근한 경우에만 로그인 진행
-    if (currentUrl.includes('/login')) {
-      // 입력창 DOM 대기
+    await page.setUserAgent(
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    );
+
+    // 로그인 페이지 접속 및 인증 진행
+    console.log('로그인시도');
+    await page.goto('https://www.joatech.co.kr/login', { waitUntil: 'networkidle2' });
+
+    if (page.url().includes('/login')) {
+      console.log('로그인');
       await page.waitForSelector('input[name="userid"]', { visible: true, timeout: 10000 });
       await page.waitForSelector('input[name="password"]', { visible: true, timeout: 10000 });
 
-      // 아이디/비밀번호 입력
       await page.type('input[name="userid"]', JOA_CONFIG.id, { delay: 50 });
       await page.type('input[name="password"]', JOA_CONFIG.pw, { delay: 50 });
 
-      // 로그인 버튼 클릭 및 이동 대기
       await Promise.all([
         page.click('button[type="submit"], input[type="submit"]'),
-        page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 })
+        page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 }).catch(() => {})
       ]);
 
-      console.log('[조아테크] Puppeteer 신규 로그인 성공');
-    } else {
-      console.log('[조아테크] 이미 로그인 세션이 유지되어 있어 이전을 건너뜁니다.');
+      console.log('완료 사이트이동', page.url());
     }
 
-    // 2. 고압탱크 모니터링 페이지 이동
+    // 모니터링 페이지 이동 및 렌더링 대기
+    console.log('이동성공');
     await page.goto('https://www.joatech.co.kr/GAS_EYE/0/highpressuretank/monitoring?filter=total', {
       waitUntil: 'networkidle2',
       timeout: 30000
     });
 
-    // 화면 렌더링 안정화를 위해 3초 대기
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    console.log('로딩 실행 작동됨');
+    await new Promise(resolve => setTimeout(resolve, 5000));
 
-    // 3. 화면 DOM에서 데이터 추출
-    const result = await page.evaluate(() => {
-      let n2 = { weight: null, max_weight: 5000, percent: null, pressure: null, status: 'NORMAL' };
-      let co2 = { weight: null, max_weight: 5000, percent: null, pressure: null, status: 'NORMAL' };
+    // DOM 내부 가스 데이터(LN2, LCO2) 파싱
+    console.log('데이터가져오기중');
+    const parsedData = await page.evaluate(() => {
+      const parseValue = (text, regex) => {
+        const match = text.match(regex);
+        return match ? match[1] : null;
+      };
+
+      const result = {
+        n2: { weight: null, max_weight: 5000, percent: null, pressure: null, status: 'NORMAL' },
+        co2: { weight: null, max_weight: 5000, percent: null, pressure: null, status: 'NORMAL' }
+      };
 
       const cards = document.querySelectorAll('div, section');
 
@@ -77,70 +75,59 @@ async function fetchJoatechGasData() {
         const text = card.innerText;
         if (!text) return;
 
-        // 질소(LN2) 카드 영역 판단
-        if ((text.includes('LN2') || text.includes('질소')) && !text.includes('LCO2')) {
-          const pctMatch = text.match(/(\d+)\s*%/);
-          if (pctMatch && n2.percent === null) n2.percent = parseInt(pctMatch[1], 10);
+        const isN2 = (text.includes('LN2') || text.includes('질소')) && !text.includes('LCO2');
+        const isCO2 = (text.includes('LCO2') || text.includes('탄산')) && !text.includes('LN2');
+        const target = isN2 ? result.n2 : isCO2 ? result.co2 : null;
 
-          const weightMatch = text.match(/([\d,]+)\s*kg/i);
-          if (weightMatch && n2.weight === null) n2.weight = parseInt(weightMatch[1].replace(/,/g, ''), 10);
-
-          const pressMatch = text.match(/([\d.]+)\s*bar/i);
-          if (pressMatch && n2.pressure === null) n2.pressure = parseFloat(pressMatch[1]);
-        }
-
-        // 탄산(LCO2) 카드 영역 판단
-        if ((text.includes('LCO2') || text.includes('탄산')) && !text.includes('LN2')) {
-          const pctMatch = text.match(/(\d+)\s*%/);
-          if (pctMatch && co2.percent === null) co2.percent = parseInt(pctMatch[1], 10);
-
-          const weightMatch = text.match(/([\d,]+)\s*kg/i);
-          if (weightMatch && co2.weight === null) co2.weight = parseInt(weightMatch[1].replace(/,/g, ''), 10);
-
-          const pressMatch = text.match(/([\d.]+)\s*bar/i);
-          if (pressMatch && co2.pressure === null) co2.pressure = parseFloat(pressMatch[1]);
+        if (target) {
+          if (target.percent === null) {
+            const pct = parseValue(text, /(\d+)\s*%/);
+            if (pct) target.percent = parseInt(pct, 10);
+          }
+          if (target.weight === null) {
+            const weight = parseValue(text, /([\d,]+)\s*kg/i);
+            if (weight) target.weight = parseInt(weight.replace(/,/g, ''), 10);
+          }
+          if (target.pressure === null) {
+            const press = parseValue(text, /([\d.]+)\s*bar/i);
+            if (press) target.pressure = parseFloat(press);
+          }
         }
       });
 
-      return { n2, co2 };
+      return result;
     });
 
-    // 시크릿 컨텍스트 및 페이지 닫기
-    if (context) await context.close();
+    console.log('데이터값:', JSON.stringify(parsedData, null, 2));
 
-    console.log('[조아테크 파싱 최종 결과] 수집된 데이터:', result);
-
-    return {
+    const finalData = {
       joa_co2: { 
-        weight: result.co2.weight !== null ? result.co2.weight : 4847, 
+        weight: parsedData.co2.weight ?? 4847, 
         max_weight: 5000, 
-        percent: result.co2.percent !== null ? result.co2.percent : 89, 
-        pressure: result.co2.pressure !== null ? result.co2.pressure : 15.4, 
+        percent: parsedData.co2.percent ?? 89, 
+        pressure: parsedData.co2.pressure ?? 15.4, 
         status: 'NORMAL' 
       },
       joa_n2: { 
-        weight: result.n2.weight !== null ? result.n2.weight : 3695, 
+        weight: parsedData.n2.weight ?? 3695, 
         max_weight: 5000, 
-        percent: result.n2.percent !== null ? result.n2.percent : 74, 
-        pressure: result.n2.pressure !== null ? result.n2.pressure : 13.9, 
+        percent: parsedData.n2.percent ?? 74, 
+        pressure: parsedData.n2.pressure ?? 13.9, 
         status: 'NORMAL' 
       }
     };
 
+    console.log('되는중');
+    return finalData;
+
   } catch (err) {
-    if (context) {
-      try { await context.close(); } catch (e) {}
-    }
-    console.error('[조아테크 오류] Puppeteer 수집 실패:', err.message);
-
-    if (browserInstance) {
-      try {
-        await browserInstance.close();
-      } catch (e) {}
-      browserInstance = null;
-    }
-
+    console.error('에러:', err.message);
     return null;
+  } finally {
+    if (browser) {
+      await browser.close().catch(() => {});
+      console.log('성공시발~');
+    }
   }
 }
 
