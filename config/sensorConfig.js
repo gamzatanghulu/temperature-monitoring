@@ -20,8 +20,8 @@ module.exports = {
     '스마트센서':   { name: '12번창고', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -12.0, sensorId: '8433-5905', channel: 1},
     '2채널':   { name: '13번창고', zone: '외부창고', type: 'COOLING', min: 0.0, max: 5.0, sensorId: '8433-5905', channel: 2 },
     'B동 냉동':   { name: 'B동냉동창고', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -12.0, sensorId: '8405-9325'},
-    'B동 냉장1,2':   { name: 'B동냉장창고1', zone: '외부창고', type: 'COOLING', min: 0.0, max: 5.0, sensorId: '2830-9035', channel: 1},
-    'B동 냉장1,2':   { name: 'B동냉장창고2', zone: '외부창고', type: 'COOLING', min: 0.0, max: 5.0, sensorId: '2830-9035', channel: 2},
+    'B동 냉장1':   { name: 'B동냉장창고1', zone: '외부창고', type: 'COOLING', min: 0.0, max: 5.0, sensorId: '2830-9035', channel: 1},
+    'B동 냉장2':   { name: 'B동냉장창고2', zone: '외부창고', type: 'COOLING', min: 0.0, max: 5.0, sensorId: '2830-9035', channel: 2},
     'joa_co2':      { name: '탄산 고압용기', zone: '가스 저장소', type: 'GAS' },
     'joa_n2':       { name: '질소 고압용기', zone: '가스 저장소', type: 'GAS' }
   }
