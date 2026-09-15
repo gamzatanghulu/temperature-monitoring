@@ -12,7 +12,6 @@
 <body>
   <div class="dashboard">
 
-    <!-- 상단 헤더 영역 -->
     <header class="header">
       <div class="header-left">
         <div class="logo-wrapper">
@@ -25,7 +24,6 @@
         </div>
       </div>
 
-      <!-- 컨트롤 패널 -->
       <div class="status-panel">
         <div class="range-toggle-group">
           <button id="btn-range-24h" class="btn-range active" onclick="changeChartRange('24h')">24시간 보기</button>
@@ -50,12 +48,9 @@
       </div>
     </header>
 
-    <!-- 상단 가스 2개(좌측) + 관제 모니터링 개수 카드(우측) 한 줄 배치 -->
     <section class="top-overview-row">
       
-      <!-- 좌측: 고압가스 용기 (탄산, 질소) 컴팩트 카드 -->
       <div class="gas-compact-container">
-        <!-- LCO2 탄산 -->
         <div class="gas-card-compact lco2">
           <div class="gas-tank-visual">
             <div class="tank-cap">LCO2</div>
@@ -76,7 +71,6 @@
           </div>
         </div>
 
-        <!-- LN2 질소 -->
         <div class="gas-card-compact ln2">
           <div class="gas-tank-visual">
             <div class="tank-cap ln2-cap">LN2</div>
@@ -98,7 +92,6 @@
         </div>
       </div>
 
-      <!-- 우측: 모니터링 개수 요약 카드 -->
       <div class="summary-grid">
         <div class="stat-card">
           <div class="stat-info">
@@ -117,7 +110,7 @@
         <div class="stat-card freezer">
           <div class="stat-info">
             <span class="stat-label">냉동 창고</span>
-            <span class="stat-subtext" id="range-subtext-FREEZING">기준 확인 중</span>
+            <span class="stat-subtext" id="range-subtext-FREEZING">기준: -25.0℃ ~ -18.0℃</span>
           </div>
           <span class="stat-value stat-freezer-color" id="stat-freezer-status">0 / 0</span>
         </div>
@@ -132,15 +125,12 @@
 
     </section>
 
-    <!-- 경고 알림 배너 -->
     <div id="alert-banner" class="alert-banner">
       <div><span>[시스템 경고] </span><span id="alert-message">이상 데이터가 감지되었습니다.</span></div>
       <button type="button" onclick="closeAlert()" class="btn-close-alert">[닫기]</button>
     </div>
 
-    <!-- 메인 온·습도 전용 관제 구역 -->
     <main class="main-grid">
-      <!-- 냉장 창고 -->
       <section class="category-panel">
         <div class="panel-header">
           <span class="panel-title"><span class="badge-cat ref">냉장</span> 냉장 창고</span>
@@ -155,11 +145,10 @@
         <div class="sensor-tile-container" id="container-COOLING"></div>
       </section>
 
-      <!-- 냉동 창고 -->
       <section class="category-panel">
         <div class="panel-header">
           <span class="panel-title"><span class="badge-cat freezer">냉동</span> 냉동 창고</span>
-          <span class="range-header-text" id="header-range-FREEZING">--</span>
+          <span class="range-header-text" id="header-range-FREEZING">-25.0℃ ~ -18.0℃</span>
         </div>
         <div class="table-headers">
           <div>센서명</div>
@@ -170,7 +159,6 @@
         <div class="sensor-tile-container" id="container-FREEZING"></div>
       </section>
 
-      <!-- 야외 관제 -->
       <section class="category-panel">
         <div class="panel-header">
           <span class="panel-title"><span class="badge-cat outdoor">야외</span> 폭염/온열 관제</span>
@@ -188,7 +176,6 @@
 
   </div>
 
-  <!-- 엑셀 모달 -->
   <div id="customConfirmModal" class="modal-backdrop">
     <div class="modal-box">
       <h3>엑셀 보고서 다운로드</h3>

@@ -1,15 +1,18 @@
 // 센서 마스터 정보
 const SENSOR_CONFIG = {
-  '스마트온도계': { name: '공무팀', zone: '야외 현장', type: 'OUTDOOR', min: 0.0, max: 50.0, sensorId: '6281-7088' },
-  '13room':       { name: '외부창고', zone: '야외 현장', type: 'OUTDOOR', min: 0.0, max: 50.0, sensorId: '8629-9794' },
-  '2team1':       { name: '쿠커실', zone: '현장 온열', type: 'OUTDOOR', min: 0.0, max: 36.0, sensorId: '7244-3574' },
-  '2team':        { name: '유화솥', zone: '현장 온열', type: 'OUTDOOR', min: 0.0, max: 36.0, sensorId: '4289-4748' },
-  '2팀천장':      { name: '2팀천장', zone: '현장 온열', type: 'OUTDOOR', min: 0.0, max: 36.0, sensorId: '5704-7896' },
-  '스마트센서':   { name: '12번창고', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -12.0, sensorId: '8433-5905', channel: 1 },
-  '2채널':   { name: '13번창고', zone: '외부창고', type: 'COOLING', min: 0.0, max: 5.0, sensorId: '8433-5905', channel: 2 },
-  'B동 냉동':   { name: 'B동냉동창고', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -12.0, sensorId: '8405-9325'},
-  'B동 냉장1':   { name: 'B동냉장창고1', zone: '외부창고', type: 'COOLING', min: 0.0, max: 5.0, sensorId: '2830-9035', channel: 1},
-  'B동 냉장2':   { name: 'B동냉장창고2', zone: '외부창고', type: 'COOLING', min: 0.0, max: 5.0, sensorId: '2830-9035', channel: 2},
+    '스마트온도계': { name: '공무팀', zone: '야외 현장', type: 'OUTDOOR', min: 0.0, max: 50.0, sensorId: '6281-7088' },
+    '13room':       { name: '외부창고', zone: '야외 현장', type: 'OUTDOOR', min: 0.0, max: 50.0, sensorId: '8629-9794' },
+    '2team1':       { name: '쿠커실', zone: '현장 온열', type: 'OUTDOOR', min: 0.0, max: 36.0, sensorId: '7244-3574' },
+    '2team':        { name: '유화솥', zone: '현장 온열', type: 'OUTDOOR', min: 0.0, max: 36.0, sensorId: '4289-4748' },
+    '2팀천장':      { name: '2팀천장', zone: '현장 온열', type: 'OUTDOOR', min: 0.0, max: 36.0, sensorId: '5704-7896' },
+    '11번창고':   { name: '11번냉동창고', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -12.0, sensorId: '9751-1833', channel: 1},
+    '스마트센서':   { name: '12번냉동창고', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -5.0, sensorId: '8433-5905', channel: 1 },
+    '2채널':   { name: '13번냉장창고', zone: '외부창고', type: 'COOLING', min: 0.0, max: 5.0, sensorId: '8433-5905', channel: 2 },
+    '14번창고':   { name: '14번냉동창고', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -12.0, sensorId: '4595-1501', channel: 1},
+    '15번창고':   { name: '15번냉장창고', zone: '외부창고', type: 'COOLING', min: -1.0, max: 5.0, sensorId: '4595-1501', channel: 2},
+    'B동 냉동':   { name: 'B동냉동창고', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -12.0, sensorId: '8405-9325'},
+    'B동 냉장1':   { name: 'B동냉장창고1', zone: '외부창고', type: 'COOLING', min: 0.0, max: 5.0, sensorId: '2830-9035', channel: 1},
+    'B동 냉장2':   { name: 'B동냉장창고2', zone: '외부창고', type: 'COOLING', min: 0.0, max: 5.0, sensorId: '2830-9035', channel: 2},
 };
 
 // 전역 설정
@@ -49,11 +52,11 @@ window.onload = () => {
 // 웹 알림 권한 요청
 function autoRequestNotificationPermission() {
   if ("Notification" in window && Notification.permission === "default") {
-    Notification.permission;
+    Notification.requestPermission().catch(() => {});
   }
 }
 
-// 오디오 컨텍스트 초기화
+// 오디오 컨텍스트 초기화 (사용자 인터랙션 핸들러)
 function initAudioContext() {
   if (!STATE.audioCtx) {
     STATE.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -214,10 +217,16 @@ function renderDashboard(data) {
   });
 
   const activeTotal = Object.values(catCounts).reduce((acc, cur) => acc + cur.total, 0);
-  document.getElementById('stat-total').innerText = activeTotal;
-  document.getElementById('stat-ref-status').innerText = `${catCounts.COOLING.ok} / ${catCounts.COOLING.total}`;
-  document.getElementById('stat-freezer-status').innerText = `${catCounts.FREEZING.ok} / ${catCounts.FREEZING.total}`;
-  document.getElementById('stat-outdoor-status').innerText = `${catCounts.OUTDOOR.ok} / ${catCounts.OUTDOOR.total}`;
+  
+  const totalElem = document.getElementById('stat-total');
+  const refElem = document.getElementById('stat-ref-status');
+  const freezerElem = document.getElementById('stat-freezer-status');
+  const outdoorElem = document.getElementById('stat-outdoor-status');
+
+  if (totalElem) totalElem.innerText = activeTotal;
+  if (refElem) refElem.innerText = `${catCounts.COOLING.ok} / ${catCounts.COOLING.total}`;
+  if (freezerElem) freezerElem.innerText = `${catCounts.FREEZING.ok} / ${catCounts.FREEZING.total}`;
+  if (outdoorElem) outdoorElem.innerText = `${catCounts.OUTDOOR.ok} / ${catCounts.OUTDOOR.total}`;
 
   const validAlertItems = (data.alert_items || []).filter(item => !CONFIG.EXCLUDED_ALERT_TYPES.includes(item.type));
   showAlertBanner(validAlertItems);
@@ -312,7 +321,7 @@ function renderSensorTile(index, cfg, temp, hum, feelsLike, isWarning) {
   }
 }
 
-// 미니 차트 생성 및 업데이트
+// 미니 차트 생성 및 업데이트 (X축 라벨 스킵 처리 포함)
 function updateOrCreateMiniChart(index, cfg, currentTemp, time, history) {
   const canvasElem = document.getElementById(`chart-canvas-${index}`);
   if (!canvasElem) return;
@@ -343,14 +352,14 @@ function updateOrCreateMiniChart(index, cfg, currentTemp, time, history) {
         data: tempData, 
         borderColor: colorPrimary, 
         backgroundColor: gradient, 
-        borderWidth: 1.8, 
+        borderWidth: 1.5, 
         pointRadius: 0, 
-        pointHoverRadius: 5, 
+        pointHoverRadius: 4, 
         pointHoverBackgroundColor: colorPrimary,
         pointHoverBorderColor: '#ffffff',
-        pointHoverBorderWidth: 2,
+        pointHoverBorderWidth: 1.5,
         fill: true, 
-        tension: 0.25, 
+        tension: 0.2, 
         spanGaps: true 
       }]
     },
@@ -359,7 +368,10 @@ function updateOrCreateMiniChart(index, cfg, currentTemp, time, history) {
       maintainAspectRatio: false,
       animation: false,
       interaction: { mode: 'index', intersect: false },
-      layout: { padding: { top: 4, bottom: 2, left: 2, right: 2 } },
+      // 패딩을 유연하게 조정하여 라벨이 캔버스 내부로 들어오도록 설정
+      layout: { 
+        padding: { top: 4, bottom: 2, left: 0, right: 4 } 
+      },
       plugins: {
         legend: { display: false },
         tooltip: {
@@ -367,7 +379,7 @@ function updateOrCreateMiniChart(index, cfg, currentTemp, time, history) {
           backgroundColor: 'rgba(15, 23, 42, 0.95)', 
           titleColor: '#94a3b8', 
           bodyColor: colorPrimary,
-          bodyFont: { weight: 'bold', size: 11 },
+          bodyFont: { weight: 'bold', size: 10 },
           titleFont: { size: 9 },
           borderColor: '#334155', 
           borderWidth: 1, 
@@ -384,26 +396,31 @@ function updateOrCreateMiniChart(index, cfg, currentTemp, time, history) {
           display: true,
           grid: { display: false },
           ticks: {
-            color: '#64748b', font: { size: 8 }, maxRotation: 0, autoSkip: false,
-            callback: function(val, idx, ticks) {
+            color: '#64748b', 
+            font: { size: 8 }, 
+            maxRotation: 0, 
+            autoSkip: true,
+            maxTicksLimit: 4, // 작은 미니 차트에 맞춰 라벨 수를 4개 정도로 제한
+            padding: 2,      // 캔버스 하단 경계와의 간격 축소
+            callback: function(val) {
               const label = this.getLabelForValue(val);
               if (!label) return '';
               if (STATE.currentRangeMode === '24h') {
                 const hour = parseInt(label.split(':')[0], 10);
-                return hour % 4 === 0 ? `${hour}시` : '';
-              } else {
-                return (idx === 0 || idx === ticks.length - 1 || idx % 3 === 0) ? label : '';
+                return `${hour}시`;
               }
+              return label;
             }
           }
         },
         y: {
           display: true, 
-          grid: { color: 'rgba(255, 255, 255, 0.08)' },
+          grid: { color: 'rgba(255, 255, 255, 0.05)' },
           ticks: { 
-            color: '#94a3b8', 
+            color: '#64748b', 
             font: { size: 7.5 }, 
             maxTicksLimit: 3, 
+            padding: 2,
             callback: val => typeof val === 'number' ? `${val.toFixed(1)}℃` : val 
           }
         }
@@ -416,27 +433,28 @@ function updateOrCreateMiniChart(index, cfg, currentTemp, time, history) {
 function prepareChartData(index, time, history) {
   let labels = [];
   let tempData = [];
-  const hourlyValidTemps = new Map();
-
-  if (history && history.length > 0) {
-    history.forEach(h => {
-      const timeKey = formatTimeLabel(h.time);
-      if (h.temps && h.temps[index] !== undefined && h.temps[index] !== null) {
-        const val = parseFloat(h.temps[index]);
-        if (!isNaN(val) && val !== 0) {
-          const hourKey = timeKey.split(':')[0];
-          if (!hourlyValidTemps.has(hourKey)) hourlyValidTemps.set(hourKey, []);
-          hourlyValidTemps.get(hourKey).push(val);
-        }
-      }
-    });
-  }
 
   const nowTimeStr = formatTimeLabel(time || '11:00');
-  const nowHour = parseInt(nowTimeStr.split(':')[0], 10) || 11;
-  const nowMin = parseInt(nowTimeStr.split(':')[1], 10) || 0;
+  const nowParts = nowTimeStr.split(':');
+  const nowHour = parseInt(nowParts[0], 10) || 0;
+  const nowMin = parseInt(nowParts[1], 10) || 0;
 
   if (STATE.currentRangeMode === '24h') {
+    const hourlyValidTemps = new Map();
+    if (history && history.length > 0) {
+      history.forEach(h => {
+        const timeKey = formatTimeLabel(h.time);
+        if (h.temps && h.temps[index] !== undefined && h.temps[index] !== null) {
+          const val = parseFloat(h.temps[index]);
+          if (!isNaN(val) && val !== 0) {
+            const hourKey = timeKey.split(':')[0];
+            if (!hourlyValidTemps.has(hourKey)) hourlyValidTemps.set(hourKey, []);
+            hourlyValidTemps.get(hourKey).push(val);
+          }
+        }
+      });
+    }
+
     for (let i = 24; i >= 0; i--) {
       let targetHour = (nowHour - i + 24) % 24;
       const targetHourStr = String(targetHour).padStart(2, '0');
@@ -449,27 +467,27 @@ function prepareChartData(index, time, history) {
       tempData.push(selectedVal);
     }
   } else {
-    const historyMap = new Map();
     if (history && history.length > 0) {
       history.forEach(h => {
-        const timeKey = formatTimeLabel(h.time);
+        labels.push(formatTimeLabel(h.time));
+        let val = null;
         if (h.temps && h.temps[index] !== undefined && h.temps[index] !== null) {
-          const val = parseFloat(h.temps[index]);
-          if (!isNaN(val) && val !== 0) historyMap.set(timeKey, val);
+          const parsed = parseFloat(h.temps[index]);
+          if (!isNaN(parsed) && parsed !== 0) val = parsed;
         }
+        tempData.push(val);
       });
-    }
+    } else {
+      for (let i = 11; i >= 0; i--) {
+        const totalMins = (nowHour * 60 + nowMin) - (i * 5);
+        let h = Math.floor(totalMins / 60) % 24;
+        if (h < 0) h += 24;
+        let m = totalMins % 60;
+        if (m < 0) m += 60;
 
-    for (let i = 11; i >= 0; i--) {
-      const totalMins = (nowHour * 60 + nowMin) - (i * 5);
-      let h = Math.floor(totalMins / 60) % 24;
-      if (h < 0) h += 24;
-      let m = totalMins % 60;
-      if (m < 0) m += 60;
-
-      const timeKey = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-      labels.push(timeKey);
-      tempData.push(historyMap.has(timeKey) ? historyMap.get(timeKey) : null);
+        labels.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+        tempData.push(i === 0 ? currentTemp : null);
+      }
     }
   }
 
@@ -506,7 +524,7 @@ function showAlertBanner(items) {
 
     if (hasNewAlarm) {
       STATE.isSoundMutedByUser = false; 
-      startContinuousAlarm();
+      // startContinuousAlarm();  // 알림음 설정
     }
 
     if ("Notification" in window && Notification.permission === "granted") {
@@ -521,7 +539,11 @@ function showAlertBanner(items) {
   } else {
     banner.classList.remove('active');
     STATE.lastNotifiedKeys.clear();
-    acknowledgeAndStopSound();
+    STATE.isSoundMutedByUser = false;
+    stopAlarmSoundOnly();
+    
+    const stopBtn = document.getElementById('stopAlarmBtn');
+    if (stopBtn) stopBtn.style.display = 'none';
   }
 }
 
@@ -552,7 +574,7 @@ function changeChartRange(mode) {
   fetchSensorData();
 }
 
-// 시간 포맷 변환
+// 시간 포맷 변환 (초 단위 제거 및 공백 방지)
 function formatTimeLabel(timeStr) {
   if (!timeStr) return '';
   const timePart = timeStr.trim().includes(' ') ? timeStr.trim().split(' ')[1] : timeStr.trim();

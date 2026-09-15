@@ -25,10 +25,9 @@ html, body {
   background: var(--bg-main);
   color: var(--text-primary);
   padding: 10px 12px;
-  overflow: hidden;
+  overflow-x: hidden;
 }
 
-/* Layout Structure */
 .dashboard {
   width: 100%;
   height: 100%;
@@ -79,14 +78,14 @@ html, body {
 }
 
 .header-title-box h1 {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
   color: #ffffff;
   letter-spacing: -0.3px;
 }
 
 .header-title-box p {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text-secondary);
   margin-top: 1px;
 }
@@ -99,7 +98,7 @@ html, body {
 }
 
 .update-badge {
-  font-size: 10px;
+  font-size: 11px;
   background: #0f172a;
   color: #e2e8f0;
   padding: 5px 10px;
@@ -113,7 +112,6 @@ html, body {
   font-family: 'Consolas', monospace;
 }
 
-/* Controls & Buttons */
 .btn-stop-alarm {
   display: none;
   background: #dc2626;
@@ -152,9 +150,9 @@ html, body {
   background: transparent;
   color: #64748b;
   border: none;
-  padding: 3px 8px;
+  padding: 4px 10px;
   border-radius: 4px;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   cursor: pointer;
 }
@@ -177,8 +175,8 @@ html, body {
 
 .excel-control-box input,
 .excel-control-box select {
-  padding: 3px 5px;
-  font-size: 10px;
+  padding: 4px 6px;
+  font-size: 11px;
   border: 1px solid var(--border);
   border-radius: 4px;
   background: #1e293b;
@@ -188,21 +186,20 @@ html, body {
 
 .date-separator {
   color: #64748b;
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .btn-excel {
   background: #16a34a;
   color: #ffffff;
   border: none;
-  padding: 4px 8px;
+  padding: 5px 10px;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
 }
 
-/* Overview Section */
 .top-overview-row {
   display: flex;
   gap: 8px;
@@ -219,23 +216,24 @@ html, body {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 6px 12px;
+  padding: 8px 12px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  min-width: 230px;
+  gap: 12px;
+  min-width: 220px;
 }
 
 .gas-tank-visual {
   display: flex;
   flex-direction: column;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .tank-cap {
   background: #22c55e;
   color: #000000;
-  font-size: 8.5px;
+  font-size: 9px;
   font-weight: 800;
   padding: 1px 5px;
   border-radius: 2px;
@@ -248,8 +246,8 @@ html, body {
 }
 
 .tank-body {
-  width: 32px;
-  height: 48px;
+  width: 34px;
+  height: 50px;
   border: 2px solid #64748b;
   border-radius: 12px 12px 4px 4px;
   position: relative;
@@ -280,7 +278,7 @@ html, body {
 .tank-percent {
   position: relative;
   z-index: 2;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 900;
   color: #ffffff;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
@@ -289,7 +287,8 @@ html, body {
 .gas-details {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
+  min-width: 0;
 }
 
 .gas-title-line {
@@ -299,24 +298,26 @@ html, body {
 }
 
 .gas-name {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   color: #f1f5f9;
+  white-space: nowrap;
 }
 
 .gas-status-badge.ok {
   background: rgba(34, 197, 94, 0.15);
   color: #4ade80;
   border: 1px solid rgba(34, 197, 94, 0.3);
-  font-size: 8.5px;
-  padding: 0 4px;
+  font-size: 9px;
+  padding: 1px 5px;
   border-radius: 3px;
+  white-space: nowrap;
 }
 
 .gas-sub-info {
   display: flex;
   flex-direction: column;
-  font-size: 10.5px;
+  font-size: 11px;
   color: #cbd5e1;
   gap: 2px;
 }
@@ -345,7 +346,7 @@ html, body {
 .stat-card {
   background: var(--bg-card);
   border: 1px solid var(--border);
-  padding: 6px 12px;
+  padding: 8px 12px;
   border-radius: 8px;
   display: flex;
   justify-content: space-between;
@@ -364,18 +365,18 @@ html, body {
 }
 
 .stat-label {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-secondary);
   font-weight: 600;
 }
 
 .stat-subtext {
-  font-size: 9.5px;
+  font-size: 10px;
   color: #64748b;
 }
 
 .stat-value {
-  font-size: 17px;
+  font-size: 19px;
   font-weight: 700;
   font-family: 'Consolas', monospace;
   color: #ffffff;
@@ -385,17 +386,16 @@ html, body {
 .stat-freezer-color { color: var(--color-freezer); }
 .stat-outdoor-color { color: var(--color-outdoor); }
 
-/* Alerts */
 .alert-banner {
   display: none;
   background: #7f1d1d;
   border: 1px solid #dc2626;
   color: #fecaca;
-  padding: 6px 12px;
+  padding: 8px 14px;
   border-radius: 6px;
   align-items: center;
   justify-content: space-between;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   flex-shrink: 0;
 }
@@ -409,10 +409,9 @@ html, body {
   border: none;
   color: inherit;
   cursor: pointer;
-  font-size: 11px;
+  font-size: 12px;
 }
 
-/* Monitoring Grid */
 .main-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -425,7 +424,7 @@ html, body {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 8px;
+  padding: 10px;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -436,13 +435,13 @@ html, body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-bottom: 4px;
+  padding-bottom: 6px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
 
 .panel-title {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -451,9 +450,9 @@ html, body {
 }
 
 .badge-cat {
-  padding: 2px 5px;
+  padding: 2px 6px;
   border-radius: 4px;
-  font-size: 10px;
+  font-size: 11px;
   color: #ffffff;
   font-weight: 700;
 }
@@ -473,14 +472,14 @@ html, body {
 
 .table-headers {
   display: grid;
-  grid-template-columns: 85px 65px 50px 1fr;
+  grid-template-columns: 105px 75px 55px 1fr;
   align-items: center;
   gap: 6px;
-  padding: 4px 8px;
+  padding: 6px 8px;
   background: #0f172a;
   border-radius: 4px;
   border: 1px solid #1e293b;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--text-secondary);
   text-align: center;
@@ -490,7 +489,7 @@ html, body {
 .sensor-tile-container {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   overflow-y: auto;
   flex: 1;
   padding-right: 2px;
@@ -498,14 +497,14 @@ html, body {
 
 .sensor-tile {
   display: grid;
-  grid-template-columns: 85px 65px 50px 1fr;
+  grid-template-columns: 105px 75px 55px 1fr;
   align-items: center;
   gap: 6px;
   background: #0f172a;
-  border-radius: 4px;
-  padding: 4px 8px;
+  border-radius: 6px;
+  padding: 6px 8px;
   border: 1px solid var(--border);
-  border-left: 3px solid #475569;
+  border-left: 4px solid #475569;
   flex-shrink: 0;
 }
 
@@ -527,7 +526,7 @@ html, body {
 }
 
 .tile-zone {
-  font-size: 9px;
+  font-size: 10px;
   color: var(--text-secondary);
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -535,7 +534,7 @@ html, body {
 }
 
 .tile-name {
-  font-size: 11px;
+  font-size: 13px;
   color: #ffffff;
   font-weight: 700;
   white-space: nowrap;
@@ -556,25 +555,25 @@ html, body {
 }
 
 .tile-temp {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 700;
   font-family: 'Consolas', monospace;
   color: #ffffff;
 }
 
 .tile-temp-unit {
-  font-size: 10px;
+  font-size: 11px;
   color: #cbd5e1;
 }
 
 .tile-feels {
-  font-size: 9px;
+  font-size: 10px;
   color: #f87171;
   white-space: nowrap;
 }
 
 .tile-hum {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--color-hum);
   font-family: 'Consolas', monospace;
@@ -583,7 +582,7 @@ html, body {
 
 .minichart-wrapper {
   width: 100%;
-  height: 55px;
+  height: 60px;
   background: #030712;
   border-radius: 4px;
   padding: 2px 4px;
@@ -596,7 +595,6 @@ html, body {
   height: 100% !important;
 }
 
-/* Modals */
 .modal-backdrop {
   display: none;
   position: fixed;
@@ -619,13 +617,13 @@ html, body {
 
 .modal-box h3 {
   margin-bottom: 6px;
-  font-size: 14px;
+  font-size: 15px;
   color: #ffffff;
 }
 
 .modal-desc {
   margin-bottom: 12px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-secondary);
 }
 
@@ -635,7 +633,7 @@ html, body {
   border-radius: 6px;
   padding: 10px;
   margin-bottom: 12px;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.5;
 }
 
@@ -646,7 +644,7 @@ html, body {
 
 .modal-confirm-text {
   margin-bottom: 12px;
-  font-size: 11px;
+  font-size: 12px;
   color: #cbd5e1;
   text-align: center;
 }
@@ -663,7 +661,7 @@ html, body {
   border: none;
   background: #16a34a;
   color: #ffffff;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   cursor: pointer;
 }
@@ -675,14 +673,13 @@ html, body {
   border: 1px solid #334155;
   background: #1e293b;
   color: #94a3b8;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   cursor: pointer;
 }
 
-/* Utilities */
 ::-webkit-scrollbar {
-  width: 4px;
+  width: 5px;
 }
 
 ::-webkit-scrollbar-track {
@@ -694,17 +691,17 @@ html, body {
   border-radius: 3px;
 }
 
-/* Media Queries */
 @media (max-width: 1024px) {
   .top-overview-row {
     flex-direction: column;
   }
   .gas-compact-container {
     width: 100%;
-    justify-content: space-between;
+    flex-wrap: wrap;
   }
   .gas-card-compact {
-    flex: 1;
+    flex: 1 1 calc(50% - 4px);
+    min-width: 0;
   }
 }
 
@@ -714,36 +711,52 @@ html, body {
     overflow-y: auto;
     padding: 8px;
   }
+
   .header {
     flex-direction: column;
     align-items: flex-start;
     gap: 10px;
   }
+
   .status-panel {
     width: 100%;
     justify-content: flex-start;
   }
+
+  .gas-compact-container {
+    flex-direction: column;
+  }
+
+  .gas-card-compact {
+    width: 100%;
+    min-width: 0;
+  }
+
   .summary-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 6px;
   }
+
   .main-grid {
     grid-template-columns: 1fr;
     gap: 12px;
     height: auto;
   }
+
   .excel-control-box {
     width: 100%;
     justify-content: space-between;
     margin-top: 4px;
   }
+
   .table-headers,
   .sensor-tile {
-    grid-template-columns: 75px 55px 45px 1fr;
+    grid-template-columns: 90px 65px 45px 1fr;
     gap: 4px;
-    padding: 4px;
+    padding: 6px 4px;
   }
-  .minichart-wrapper {
-    height: 50px;
-  }
+
+  .tile-name { font-size: 12px; }
+  .tile-temp { font-size: 13px; }
+  .tile-hum  { font-size: 12px; }
 }
