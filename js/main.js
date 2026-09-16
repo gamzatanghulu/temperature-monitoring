@@ -5,6 +5,7 @@ const SENSOR_CONFIG = {
     '2team1':       { name: '쿠커실', zone: '현장 온열', type: 'OUTDOOR', min: 0.0, max: 36.0, sensorId: '7244-3574' },
     '2team':        { name: '유화솥', zone: '현장 온열', type: 'OUTDOOR', min: 0.0, max: 36.0, sensorId: '4289-4748' },
     '2팀천장':      { name: '2팀천장', zone: '현장 온열', type: 'OUTDOOR', min: 0.0, max: 36.0, sensorId: '5704-7896' },
+    '10번창고':   { name: '10번냉동창고', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -12.0, sensorId: '9751-1833', channel: 2},
     '11번창고':   { name: '11번냉동창고', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -12.0, sensorId: '9751-1833', channel: 1},
     '스마트센서':   { name: '12번냉동창고', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -5.0, sensorId: '8433-5905', channel: 1 },
     '2채널':   { name: '13번냉장창고', zone: '외부창고', type: 'COOLING', min: 0.0, max: 5.0, sensorId: '8433-5905', channel: 2 },
