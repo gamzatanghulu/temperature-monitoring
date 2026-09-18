@@ -138,13 +138,16 @@ async function fetchAndProcessData() {
         const hum = (sensorApiData && !isNaN(sensorApiData.hum)) ? sensorApiData.hum : null;
         
         let feelsLike = temp;
-        if (cfg.type === 'OUTDOOR' && temp !== null && hum !== null) {
+        
+        // [수정 핵심!] OUTDOOR -> HEAT로 변경하여 온열 현장/야외 체감온도 정상 계산
+        if (cfg.type === 'HEAT' && temp !== null && hum !== null) {
           feelsLike = calculateFeelsLikeTemp(temp, hum);
         } else if (cfg.type === 'GAS') {
           feelsLike = (sensorApiData && sensorApiData.feelsLike !== undefined) ? sensorApiData.feelsLike : 0;
         }
 
-        const targetTempForAlert = (cfg.type === 'OUTDOOR') ? feelsLike : temp;
+        // [수정 핵심!] 경보 임계값 체크 시 HEAT 타입은 체감온도 기준으로 체크
+        const targetTempForAlert = (cfg.type === 'HEAT') ? feelsLike : temp;
         
         // 임계값 및 임계범위 상태 체크
         const hasThresholds = (cfg.min !== undefined && cfg.max !== undefined);
@@ -156,11 +159,11 @@ async function fetchAndProcessData() {
         if (isCurrentlyWarning && previousState === 'NORMAL') {
           sensorStateMap[rawName] = 'WARNING';
           newlyAlertedItems.push(itemObj);
-          console.warn(`샤갈 경보 터짐: [${cfg.name}] 현재값 ${targetTempForAlert}`);
+          console.warn(`경보 발생: [${cfg.name}] 현재값(체감/기온) ${targetTempForAlert}`);
         } else if (!isCurrentlyWarning && previousState === 'WARNING') {
           sensorStateMap[rawName] = 'NORMAL';
           newlyRecoveredItems.push(itemObj);
-          console.log(`휴 살았다... 경보 해제: [${cfg.name}] 정상 복귀`);
+          console.log(`경보 해제: [${cfg.name}] 정상 복귀`);
         }
 
         if (isCurrentlyWarning) alertItems.push(itemObj);
@@ -189,7 +192,7 @@ async function fetchAndProcessData() {
         try {
           await saveSensorDataToOracle(itemsToSaveDb);
         } catch (dbErr) {
-          console.error('슈발 저장실패:', dbErr.message);
+          console.error('DB 저장 실패:', dbErr.message);
         }
       }
 
@@ -223,7 +226,7 @@ async function fetchAndProcessData() {
       console.log('cpSensor 응답 이상함.. 데이터 확인 필요:', data);
     }
   } catch (error) {
-    console.error('수집 뻗음ㅅㅂ :', error.message);
+    console.error('수집 오류:', error.message);
   }
 }
 
@@ -234,9 +237,9 @@ app.listen(PORT, async () => {
     await initDbPool();
     await createTableIfNotExists();
     sensorHistory = await loadInitialHistoryFromOracle();
-    console.log('로드 성공 무야호');
+    console.log('DB 초기화 및 데이터 로드 성공');
   } catch (err) {
-    console.error('에라이 DB 초기화 망함:', err.message);
+    console.error('DB 초기화 실패:', err.message);
   }
 
   fetchAndProcessData();
