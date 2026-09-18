@@ -34,7 +34,7 @@ html, body {
   height: 100vh;
   background: var(--bg-main);
   color: var(--text-primary);
-  padding: 6px;
+  padding: 5px; /* 전체 외부 여백 미세 축소 */
   overflow: hidden;
 }
 
@@ -43,14 +43,14 @@ html, body {
   height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px; /* 레이아웃 간격 미세 조정 */
 }
 
 /* 상단 통합 헤더 */
 .header {
   background: linear-gradient(180deg, #131c2e 0%, var(--bg-card) 100%);
-  padding: 6px 14px;
-  border-radius: 8px;
+  padding: 5px 12px;
+  border-radius: 6px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -62,22 +62,22 @@ html, body {
 .header-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .logo-wrapper {
   background: #ffffff;
-  padding: 3px 8px;
+  padding: 2px 6px;
   border-radius: 4px;
   display: flex;
   align-items: center;
 }
 
-.company-logo { height: 20px; object-fit: contain; }
-.logo-fallback { background: #1d4ed8; color: #fff; font-size: 11px; padding: 2px 6px; border-radius: 4px; }
+.company-logo { height: 18px; object-fit: contain; }
+.logo-fallback { background: #1d4ed8; color: #fff; font-size: 10.5px; padding: 2px 5px; border-radius: 3px; }
 
 .header-title-box h1 {
-  font-size: 16px;
+  font-size: 15px;
   color: #ffffff;
   letter-spacing: -0.3px;
 }
@@ -85,13 +85,13 @@ html, body {
 .status-panel {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .range-toggle-group {
   display: flex;
   background: #090d16;
-  border-radius: 5px;
+  border-radius: 4px;
   border: 1px solid var(--border);
   padding: 2px;
   gap: 2px;
@@ -101,9 +101,9 @@ html, body {
   background: transparent;
   color: #64748b;
   border: none;
-  padding: 4px 10px;
+  padding: 3px 8px;
   border-radius: 3px;
-  font-size: 11px;
+  font-size: 10.5px;
   cursor: pointer;
 }
 
@@ -114,11 +114,11 @@ html, body {
 }
 
 .update-badge {
-  font-size: 11px;
+  font-size: 10.5px;
   background: #090d16;
   color: #e2e8f0;
-  padding: 4px 10px;
-  border-radius: 5px;
+  padding: 3px 8px;
+  border-radius: 4px;
   border: 1px solid var(--border);
 }
 .update-badge span { color: var(--color-ref); font-family: 'Consolas', monospace; }
@@ -128,31 +128,31 @@ html, body {
   align-items: center;
   gap: 4px;
   background: #090d16;
-  padding: 3px 8px;
-  border-radius: 5px;
+  padding: 2px 6px;
+  border-radius: 4px;
   border: 1px solid var(--border);
 }
 
 .excel-control-box input, .excel-control-box select {
-  padding: 3px 6px;
-  font-size: 11px;
+  padding: 2px 5px;
+  font-size: 10.5px;
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: 3px;
   background: #162032;
   color: #ffffff;
   outline: none;
 }
 
-.date-sep { color: #64748b; font-size: 11px; }
+.date-sep { color: #64748b; font-size: 10.5px; }
 
 .btn-excel {
   background: #10b981;
   color: #ffffff;
   border: none;
-  padding: 4px 10px;
-  border-radius: 4px;
+  padding: 3px 8px;
+  border-radius: 3px;
   cursor: pointer;
-  font-size: 11px;
+  font-size: 10.5px;
 }
 
 .btn-stop-alarm {
@@ -160,10 +160,10 @@ html, body {
   background: #dc2626;
   color: #ffffff;
   border: 1px solid #fca5a5;
-  padding: 4px 10px;
-  border-radius: 5px;
+  padding: 3px 8px;
+  border-radius: 4px;
   cursor: pointer;
-  font-size: 11px;
+  font-size: 10.5px;
   animation: pulse-btn 0.8s infinite alternate;
 }
 
@@ -177,21 +177,21 @@ html, body {
   background: #7f1d1d;
   border: 1px solid #dc2626;
   color: #fecaca;
-  padding: 4px 12px;
-  border-radius: 6px;
+  padding: 3px 10px;
+  border-radius: 5px;
   align-items: center;
   justify-content: space-between;
-  font-size: 11px;
+  font-size: 10.5px;
   flex-shrink: 0;
 }
 .alert-banner.active { display: flex; }
-.btn-close-alert { background: none; border: none; color: inherit; cursor: pointer; font-size: 11px; }
+.btn-close-alert { background: none; border: none; color: inherit; cursor: pointer; font-size: 10.5px; }
 
 /* 메인 3분할 그리드 */
 .main-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  gap: 6px;
   flex: 1;
   min-height: 0;
 }
@@ -199,7 +199,7 @@ html, body {
 .column {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   height: 100%;
   min-height: 0;
 }
@@ -208,18 +208,18 @@ html, body {
 .gas-section {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
   flex-shrink: 0;
 }
 
 .gas-card-compact {
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 6px 12px;
+  border-radius: 6px;
+  padding: 5px 10px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .gas-card-compact.lco2 { border-left: 4px solid #ef4444; }
@@ -232,14 +232,14 @@ html, body {
   flex-shrink: 0;
 }
 
-.tank-cap { background: #ef4444; color: #ffffff; font-size: 9px; padding: 1px 5px; border-radius: 3px; margin-bottom: 2px; }
+.tank-cap { background: #ef4444; color: #ffffff; font-size: 8.5px; padding: 1px 4px; border-radius: 3px; margin-bottom: 2px; }
 .tank-cap.ln2-cap { background: #3b82f6; }
 
 .tank-body {
-  width: 38px;
-  height: 40px;
+  width: 34px;
+  height: 36px;
   border: 2px solid #475569;
-  border-radius: 8px 8px 4px 4px;
+  border-radius: 6px 6px 4px 4px;
   position: relative;
   overflow: hidden;
   background: #050811;
@@ -252,34 +252,34 @@ html, body {
 .lco2-fill { background: rgba(239, 68, 68, 0.4); border-top: 2px solid #ef4444; }
 .ln2-fill { background: rgba(59, 130, 246, 0.4); border-top: 2px solid #3b82f6; }
 
-.tank-percent { position: relative; z-index: 2; font-size: 11px; color: #ffffff; }
+.tank-percent { position: relative; z-index: 2; font-size: 10.5px; color: #ffffff; }
 
-.gas-details { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+.gas-details { display: flex; flex-direction: column; gap: 3px; flex: 1; }
 .gas-title-line { display: flex; align-items: center; justify-content: space-between; }
-.gas-name { font-size: 13px; color: #ffffff; }
+.gas-name { font-size: 12px; color: #ffffff; }
 
 .gas-status-badge.ok {
   background: rgba(16, 185, 129, 0.15);
   color: #34d399;
   border: 1px solid rgba(16, 185, 129, 0.3);
-  font-size: 9.5px;
-  padding: 1px 5px;
+  font-size: 9px;
+  padding: 1px 4px;
   border-radius: 3px;
 }
 
 .gas-data-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 6px;
+  gap: 4px;
   background: #090d16;
-  padding: 4px 8px;
-  border-radius: 5px;
+  padding: 3px 6px;
+  border-radius: 4px;
   border: 1px solid var(--border);
 }
 
 .gas-data-item { display: flex; flex-direction: column; }
-.gas-data-label { font-size: 9px; color: var(--text-secondary); }
-.gas-data-value { font-size: 11.5px; font-family: 'Consolas', monospace; }
+.gas-data-label { font-size: 8.5px; color: var(--text-secondary); }
+.gas-data-value { font-size: 11px; font-family: 'Consolas', monospace; }
 
 .highlight-red { color: #f87171; }
 .highlight-purple { color: #c084fc; }
@@ -288,11 +288,11 @@ html, body {
 .category-panel {
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 8px;
+  border-radius: 6px;
+  padding: 6px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   flex: 1;
   min-height: 0;
 }
@@ -301,33 +301,33 @@ html, body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-bottom: 4px;
+  padding-bottom: 3px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
 
-.panel-title { font-size: 13px; display: flex; align-items: center; gap: 5px; color: #ffffff; }
+.panel-title { font-size: 12px; display: flex; align-items: center; gap: 4px; color: #ffffff; }
 
-.badge-cat { padding: 1px 6px; border-radius: 3px; font-size: 10px; }
+.badge-cat { padding: 1px 5px; border-radius: 3px; font-size: 9.5px; }
 .badge-cat.ref { background: var(--color-ref); color: #000; }
 .badge-cat.freezer { background: var(--color-freezer); color: #fff; }
 .badge-cat.prod1 { background: var(--color-prod1); color: #000; }
 .badge-cat.prod2 { background: var(--color-prod2); color: #000; }
 .badge-cat.heat { background: var(--color-heat); color: #fff; }
 
-.range-header-text { font-size: 10px; color: var(--text-secondary); }
+.range-header-text { font-size: 9.5px; color: var(--text-secondary); }
 
 /* 표 헤더 비율 */
 .table-headers {
   display: grid;
-  grid-template-columns: 110px 80px 60px 1fr;
+  grid-template-columns: 100px 70px 50px 1fr;
   align-items: center;
-  gap: 6px;
-  padding: 5px 12px;
+  gap: 4px;
+  padding: 4px 8px;
   background: #090d16;
-  border-radius: 5px;
+  border-radius: 4px;
   border: 1px solid var(--border);
-  font-size: 11px;
+  font-size: 10px;
   color: var(--text-secondary);
   text-align: center;
   flex-shrink: 0;
@@ -336,25 +336,25 @@ html, body {
 .sensor-tile-container {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
 }
 
-/* 센서 타일 */
+/* 센서 타일 (여유 확보용 높이 미세 축소) */
 .sensor-tile {
   display: grid;
-  grid-template-columns: 110px 80px 60px 1fr;
+  grid-template-columns: 100px 70px 50px 1fr;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   background: #090d16;
-  border-radius: 6px;
-  padding: 8px 12px;
+  border-radius: 5px;
+  padding: 5px 8px;
   border: 1px solid var(--border);
-  border-left: 4px solid var(--status-ok);
+  border-left: 3px solid var(--status-ok);
   flex: 1;
-  min-height: 58px;
+  min-height: 44px; /* 기존 58px -> 44px 로 유연하게 조율하여 노트북 스크롤 방지 */
   transition: background 0.2s;
 }
 
@@ -370,11 +370,11 @@ html, body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  gap: 2px;
+  gap: 1px;
 }
 
 .tile-zone {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
@@ -382,7 +382,7 @@ html, body {
 }
 
 .tile-name {
-  font-size: 15px;
+  font-size: 13.5px; /* 시원하고 가독성 좋은 크기 유지 */
   color: #ffffff;
   white-space: nowrap;
   overflow: hidden;
@@ -404,25 +404,25 @@ html, body {
 }
 
 .tile-temp {
-  font-size: 20px;
+  font-size: 17px; /* 선명한 가독성 유지 */
   font-family: 'Consolas', monospace;
   color: #ffffff;
 }
 
 .tile-temp-unit {
-  font-size: 12px;
+  font-size: 11px;
   color: #94a3b8;
 }
 
 .tile-feels {
-  font-size: 10px;
+  font-size: 9.5px;
   color: #f87171;
   margin-top: 1px;
 }
 
 /* 습도 수치 */
 .tile-hum {
-  font-size: 16px;
+  font-size: 14.5px;
   color: var(--color-hum);
   font-family: 'Consolas', monospace;
   text-align: center;
@@ -432,11 +432,11 @@ html, body {
 .minichart-wrapper {
   width: 100%;
   height: 100%;
-  max-height: 65px;
-  min-height: 40px;
+  max-height: 55px;
+  min-height: 32px;
   background: #04060c;
-  border-radius: 4px;
-  padding: 3px;
+  border-radius: 3px;
+  padding: 2px;
   border: 1px solid #141e2e;
   position: relative;
   display: flex;
@@ -447,25 +447,22 @@ html, body {
 
 /* 엑셀 모달 팝업 */
 .modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.8); z-index: 9999; align-items: center; justify-content: center; }
-.modal-box { background: #101726; width: 90%; max-width: 360px; border-radius: 8px; padding: 16px; border: 1px solid var(--border); box-shadow: 0 10px 25px rgba(0, 0, 0, 0.8); }
-.modal-box h3 { margin-bottom: 4px; font-size: 15px; color: #ffffff; }
-.modal-desc { margin-bottom: 12px; font-size: 11px; color: var(--text-secondary); }
-.modal-detail { background: #090d16; border: 1px solid var(--border); border-radius: 6px; padding: 10px; margin-bottom: 12px; font-size: 11px; line-height: 1.5; }
+.modal-box { background: #101726; width: 90%; max-width: 340px; border-radius: 6px; padding: 14px; border: 1px solid var(--border); box-shadow: 0 10px 25px rgba(0, 0, 0, 0.8); }
+.modal-box h3 { margin-bottom: 4px; font-size: 14px; color: #ffffff; }
+.modal-desc { margin-bottom: 10px; font-size: 10.5px; color: var(--text-secondary); }
+.modal-detail { background: #090d16; border: 1px solid var(--border); border-radius: 5px; padding: 8px; margin-bottom: 10px; font-size: 10.5px; line-height: 1.4; }
 .modal-row { display: flex; justify-content: space-between; }
-.modal-confirm-text { margin-bottom: 12px; font-size: 12px; color: #cbd5e1; text-align: center; }
-.modal-btn-group { display: flex; gap: 6px; }
-.btn-modal-confirm { flex: 1; padding: 8px 0; border-radius: 5px; border: none; background: #10b981; color: #fff; font-size: 12px; cursor: pointer; }
-.btn-modal-cancel { flex: 1; padding: 8px 0; border-radius: 5px; border: 1px solid #334155; background: #1e293b; color: #94a3b8; font-size: 12px; cursor: pointer; }
+.modal-confirm-text { margin-bottom: 10px; font-size: 11px; color: #cbd5e1; text-align: center; }
+.modal-btn-group { display: flex; gap: 5px; }
+.btn-modal-confirm { flex: 1; padding: 7px 0; border-radius: 4px; border: none; background: #10b981; color: #fff; font-size: 11px; cursor: pointer; }
+.btn-modal-cancel { flex: 1; padding: 7px 0; border-radius: 4px; border: 1px solid #334155; background: #1e293b; color: #94a3b8; font-size: 11px; cursor: pointer; }
 
-
-/* ==========================================================================
-   📱 모바일 / 태블릿 반응형 스타일 (핵심 수정)
-   ========================================================================== */
+/* 모바일 화면 가동성 대응 */
 @media screen and (max-width: 1024px) {
   html, body {
     height: auto !important;
-    overflow-y: auto !important; /* 모바일에서 세로 스크롤 활성화 */
-    padding: 8px;
+    overflow-y: auto !important;
+    padding: 6px;
   }
 
   .dashboard {
@@ -474,7 +471,7 @@ html, body {
 
   .header {
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
     align-items: stretch;
   }
 
@@ -489,7 +486,6 @@ html, body {
     flex-wrap: wrap;
   }
 
-  /* 세로 1열 배치 */
   .main-grid {
     grid-template-columns: 1fr !important;
     height: auto !important;
@@ -509,26 +505,25 @@ html, body {
     overflow-y: visible !important;
   }
 
-  /* 모바일용 센서 타일 비율 변경 */
   .table-headers, .sensor-tile {
-    grid-template-columns: 90px 60px 45px 1fr !important;
-    padding: 6px 8px;
+    grid-template-columns: 85px 55px 40px 1fr !important;
+    padding: 5px 6px;
   }
 
   .tile-name {
-    font-size: 13px;
+    font-size: 12.5px;
   }
 
   .tile-temp {
-    font-size: 16px;
+    font-size: 15px;
   }
 
   .tile-hum {
-    font-size: 13px;
+    font-size: 12.5px;
   }
 
   .minichart-wrapper {
-    height: 45px !important;
-    min-height: 40px !important;
+    height: 40px !important;
+    min-height: 35px !important;
   }
 }
