@@ -12,13 +12,13 @@ module.exports = {
   },
 
   SENSOR_CONFIG: {
-    '스마트온도계': { name: '공무팀', zone: '야외 현장', type: 'PROD1', min: 0.0, max: 50.0, sensorId: '6281-7088' },
-    '13room':       { name: '야외외부창고', zone: '야외 현장', type: 'PROD1', min: 0.0, max: 50.0, sensorId: '8629-9794' },
+    '스마트온도계': { name: '공무팀', zone: '야외 현장', type: 'HEAT', min: 0.0, max: 50.0, sensorId: '6281-7088' },
+    '13room':       { name: '야외외부창고', zone: '야외 현장', type: 'HEAT', min: 0.0, max: 50.0, sensorId: '8629-9794' },
+    '2team1':       { name: '쿠커실', zone: '현장 온열', type: 'HEAT', min: 0.0, max: 36.0, sensorId: '7244-3574' },
+    '2team':        { name: '유화솥', zone: '현장 온열', type: 'HEAT', min: 0.0, max: 36.0, sensorId: '4289-4748' },
     '1팀외박스실':      { name: '1팀외박스실', zone: '현장 온열', type: 'PROD1', min: 0.0, max: 36.0, sensorId: '8555-3600' },
     '슈레드실1,2라인':      { name: '슈레드실1,2라인', zone: '현장 온열', type: 'PROD1', min: 0.0, max: 36.0, sensorId: '7084-4013', channel: 1 },
     '슈레드실3라인':      { name: '슈레드실3라인', zone: '현장 온열', type: 'PROD1', min: 0.0, max: 36.0, sensorId: '7084-4013', channel: 2 },
-    '2team1':       { name: '쿠커실', zone: '현장 온열', type: 'PROD2', min: 0.0, max: 36.0, sensorId: '7244-3574' },
-    '2team':        { name: '유화솥', zone: '현장 온열', type: 'PROD2', min: 0.0, max: 36.0, sensorId: '4289-4748' },
     '2팀천장':      { name: '2팀천장', zone: '현장 온열', type: 'PROD2', min: 0.0, max: 36.0, sensorId: '5704-7896' },
     '골드포장실':      { name: '골드포장실', zone: '현장 온열', type: 'PROD2', min: 0.0, max: 36.0, sensorId: '9318-2714' },
     '원료보관실':      { name: '원료보관실', zone: '현장 온열', type: 'PROD2', min: 0.0, max: 36.0, sensorId: '3848-8683', channel: 1 },

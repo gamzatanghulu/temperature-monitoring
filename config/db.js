@@ -14,8 +14,12 @@ const dbConfig = {
 };
 
 async function initDbPool() {
-  await oracledb.createPool(dbConfig);
-  console.log('오라클실행');
+  try {
+    await oracledb.createPool(dbConfig);
+    console.log('Oracle 커넥션 풀이 성공적으로 생성되었습니다.');
+  } catch (err) {
+    console.error('Oracle 커넥션 풀 생성 실패:', err.message);
+  }
 }
 
 async function createTableIfNotExists() {
@@ -35,11 +39,11 @@ async function createTableIfNotExists() {
         COLLECTED_AT TIMESTAMP DEFAULT SYSTIMESTAMP
       )
     `);
-    console.log('테이블 진행');
+    console.log('SENSOR_LOG_HISTORY 테이블이 생성되었습니다.');
   } catch (err) {
     if (err.errorNum === 955) {
-      console.log('테이블 이미있다~');
-      // 기존 테이블이 존재하는 경우, 데이터를 보존하면서 자릿수 변경 시도
+      console.log('테이블이 이미 존재합니다. 컬럼 데이터 타입 변경을 시도합니다.');
+      // 기존 테이블이 존재하는 경우 컬럼 자릿수 변경 시도
       try {
         await conn.execute(`
           ALTER TABLE SENSOR_LOG_HISTORY MODIFY (
@@ -48,12 +52,12 @@ async function createTableIfNotExists() {
             FEELS_LIKE NUMBER(10,2)
           )
         `);
-        console.log('데이터유지 자릿 수 병경(NUMBER(10,2))');
+        console.log('컬럼 자릿수 변경 완료 (NUMBER(10,2))');
       } catch (alterErr) {
-        console.log('변경성공', alterErr.message);
+        console.error('테이블 구조 변경 실패:', alterErr.message);
       }
     } else {
-      console.error('시발:', err.message);
+      console.error('테이블 생성 작업 실패:', err.message);
     }
   } finally {
     if (conn) await conn.close();
@@ -61,14 +65,15 @@ async function createTableIfNotExists() {
 }
 
 async function saveSensorDataToOracle(sensorItems) {
+  if (!Array.isArray(sensorItems) || sensorItems.length === 0) return;
+
   let conn;
   try {
     conn = await oracledb.getConnection();
-    const sql = `INSERT INTO sensor_log_history (sensor_name, sensor_type, temperature, humidity, feels_like, collected_at) 
+    const sql = `INSERT INTO SENSOR_LOG_HISTORY (SENSOR_NAME, SENSOR_TYPE, TEMPERATURE, HUMIDITY, FEELS_LIKE, COLLECTED_AT) 
                  VALUES (:name, :type, :temp, :hum, :feels, SYSTIMESTAMP)`;
     
     const binds = sensorItems.map(item => ({
-      // SENSOR_CONFIG의 rawKey(예: 'joa_co2') 또는 설정된 name을 일관되게 저장
       name: item.rawName || item.name,
       type: item.type,
       temp: (item.temp !== null && item.temp !== undefined && !isNaN(item.temp)) ? Number(item.temp) : null,
@@ -78,7 +83,7 @@ async function saveSensorDataToOracle(sensorItems) {
 
     await conn.executeMany(sql, binds);
   } catch (err) {
-    console.error('샤갈 저장실패:', err.message);
+    console.error('센서 데이터 저장 실패:', err.message);
   } finally {
     if (conn) await conn.close();
   }
@@ -133,7 +138,7 @@ async function loadInitialHistoryFromOracle() {
 
       let history = Object.values(timeMap);
       if (history.length > 288) history = history.slice(-288);
-      console.log(`차트 이력복원 : ${history.length}건`);
+      console.log(`차트 초기 이력 복원 완료: ${history.length}건`);
       return history;
     }
     return [];

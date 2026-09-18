@@ -1,28 +1,28 @@
 // 센서 마스터 정보
 const SENSOR_CONFIG = {
-    '스마트온도계': { name: '공무팀', zone: '야외 현장', type: 'PROD1', min: 0.0, max: 50.0, sensorId: '6281-7088' },
-    '13room':       { name: '야외외부창고', zone: '야외 현장', type: 'PROD1', min: 0.0, max: 50.0, sensorId: '8629-9794' },
-    '1팀외박스실':      { name: '1팀외박스실', zone: '현장 온열', type: 'PROD1', min: 0.0, max: 36.0, sensorId: '8555-3600' },
-    '슈레드실1,2라인':      { name: '슈레드실1,2라인', zone: '현장 온열', type: 'PROD1', min: 0.0, max: 36.0, sensorId: '7084-4013', channel: 1 },
-    '슈레드실3라인':      { name: '슈레드실3라인', zone: '현장 온열', type: 'PROD1', min: 0.0, max: 36.0, sensorId: '7084-4013', channel: 2 },
-    '2team1':       { name: '쿠커실', zone: '현장 온열', type: 'PROD2', min: 0.0, max: 36.0, sensorId: '7244-3574' },
-    '2team':        { name: '유화솥', zone: '현장 온열', type: 'PROD2', min: 0.0, max: 36.0, sensorId: '4289-4748' },
-    '2팀천장':      { name: '2팀천장', zone: '현장 온열', type: 'PROD2', min: 0.0, max: 36.0, sensorId: '5704-7896' },
-    '골드포장실':      { name: '골드포장실', zone: '현장 온열', type: 'PROD2', min: 0.0, max: 36.0, sensorId: '9318-2714' },
-    '원료보관실':      { name: '원료보관실', zone: '현장 온열', type: 'PROD2', min: 0.0, max: 36.0, sensorId: '3848-8683', channel: 1 },
-    '소분계량실':      { name: '소분계량실', zone: '현장 온열', type: 'PROD2', min: 0.0, max: 36.0, sensorId: '3848-8683', channel: 2 },
-    '10번창고':   { name: '10번냉동창고', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -12.0, sensorId: '9751-1833', channel: 2},
-    '11번창고':   { name: '11번냉동창고', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -12.0, sensorId: '9751-1833', channel: 1},
-    '스마트센서':   { name: '12번냉동창고', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -5.0, sensorId: '8433-5905', channel: 1 },
-    '2채널':   { name: '13번냉장창고', zone: '외부창고', type: 'COOLING', min: 0.0, max: 5.0, sensorId: '8433-5905', channel: 2 },
-    '14번창고':   { name: '14번냉동창고', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -12.0, sensorId: '4595-1501', channel: 1},
-    '15번창고':   { name: '15번냉장창고', zone: '외부창고', type: 'COOLING', min: -1.0, max: 5.0, sensorId: '4595-1501', channel: 2},
-    'B동 냉동':   { name: 'B동냉동창고', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -12.0, sensorId: '8405-9325'},
-    'B동 냉장1':   { name: 'B동냉장창고1', zone: '외부창고', type: 'COOLING', min: 0.0, max: 5.0, sensorId: '2830-9035', channel: 1},
-    'B동 냉장2':   { name: 'B동냉장창고2', zone: '외부창고', type: 'COOLING', min: 0.0, max: 5.0, sensorId: '2830-9035', channel: 2}
+  '스마트온도계': { name: '공무팀', zone: '야외 현장', type: 'HEAT', min: 0.0, max: 50.0, sensorId: '6281-7088' },
+  '13room':       { name: '야외외부창고', zone: '야외 현장', type: 'HEAT', min: 0.0, max: 50.0, sensorId: '8629-9794' },
+  '2team1':       { name: '쿠커실', zone: '현장 온열', type: 'HEAT', min: 0.0, max: 36.0, sensorId: '7244-3574' },
+  '2team':        { name: '유화솥', zone: '현장 온열', type: 'HEAT', min: 0.0, max: 36.0, sensorId: '4289-4748' },
+  '1팀외박스실':    { name: '1팀외박스실', zone: '현장 온열', type: 'PROD1', min: 0.0, max: 36.0, sensorId: '8555-3600' },
+  '슈레드실1,2라인': { name: '슈레드실1,2라인', zone: '현장 온열', type: 'PROD1', min: 0.0, max: 36.0, sensorId: '7084-4013', channel: 1 },
+  '슈레드실3라인':   { name: '슈레드실3라인', zone: '현장 온열', type: 'PROD1', min: 0.0, max: 36.0, sensorId: '7084-4013', channel: 2 },
+  '2팀천장':      { name: '2팀천장', zone: '현장 온열', type: 'PROD2', min: 0.0, max: 36.0, sensorId: '5704-7896' },
+  '골드포장실':    { name: '골드포장실', zone: '현장 온열', type: 'PROD2', min: 0.0, max: 36.0, sensorId: '9318-2714' },
+  '원료보관실':    { name: '원료보관실', zone: '현장 온열', type: 'PROD2', min: 0.0, max: 36.0, sensorId: '3848-8683', channel: 1 },
+  '소분계량실':    { name: '소분계량실', zone: '현장 온열', type: 'PROD2', min: 0.0, max: 36.0, sensorId: '3848-8683', channel: 2 },
+  '10번창고':     { name: '10번냉동창고', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -12.0, sensorId: '9751-1833', channel: 2},
+  '11번창고':     { name: '11번냉동창고', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -12.0, sensorId: '9751-1833', channel: 1},
+  '스마트센서':   { name: '12번냉동창고', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -5.0, sensorId: '8433-5905', channel: 1 },
+  '2채널':       { name: '13번냉장창고', zone: '외부창고', type: 'COOLING', min: 0.0, max: 5.0, sensorId: '8433-5905', channel: 2 },
+  '14번창고':     { name: '14번냉동창고', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -12.0, sensorId: '4595-1501', channel: 1},
+  '15번창고':     { name: '15번냉장창고', zone: '외부창고', type: 'COOLING', min: -1.0, max: 5.0, sensorId: '4595-1501', channel: 2},
+  'B동 냉동':     { name: 'B동냉동창고', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -12.0, sensorId: '8405-9325'},
+  'B동 냉장1':    { name: 'B동냉장창고1', zone: '외부창고', type: 'COOLING', min: 0.0, max: 5.0, sensorId: '2830-9035', channel: 1},
+  'B동 냉장2':    { name: 'B동냉장창고2', zone: '외부창고', type: 'COOLING', min: 0.0, max: 5.0, sensorId: '2830-9035', channel: 2}
 };
 
-// 전역 설정
+// 시스템 설정
 const CONFIG = {
   API_BASE_URL: 'https://align-structural-ski-tulsa.trycloudflare.com',
   ALARM_DURATION_SEC: 5,
@@ -30,7 +30,7 @@ const CONFIG = {
   EXCLUDED_ALERT_TYPES: ['GAS']
 };
 
-// 전역 상태
+// 앱 상태 관리
 const STATE = {
   chartsMap: {},
   audioCtx: null,
@@ -45,25 +45,25 @@ const STATE = {
   pendingDownloadParams: null
 };
 
-// 페이지 초기화 및 이벤트 연결
+// 페이지 초기화 및 폴링 설정
 window.onload = () => {
   initDateInputs();
   autoRequestNotificationPermission();
   fetchSensorData();
   setInterval(fetchSensorData, CONFIG.POLLING_INTERVAL_MS);
-  
+
   const confirmBtn = document.getElementById('confirmDownloadBtn');
   if (confirmBtn) confirmBtn.addEventListener('click', handleExcelDownload);
 };
 
-// 웹 알림 권한 요청
+// 브라우저 알림 권한 요청
 function autoRequestNotificationPermission() {
   if ("Notification" in window && Notification.permission === "default") {
     Notification.requestPermission().catch(() => {});
   }
 }
 
-// 오디오 컨텍스트 초기화 (사용자 인터랙션 핸들러)
+// 오디오 컨텍스트 초기화
 function initAudioContext() {
   if (!STATE.audioCtx) {
     STATE.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -75,7 +75,7 @@ function initAudioContext() {
 window.addEventListener('click', initAudioContext, { once: true });
 window.addEventListener('touchstart', initAudioContext, { once: true });
 
-// 알람음 연속 재생 실행
+// 경고음 연속 재생
 function startContinuousAlarm() {
   if (STATE.isSoundMutedByUser) return;
 
@@ -91,7 +91,7 @@ function startContinuousAlarm() {
   }
 }
 
-// 알람음 정지 처리
+// 경고음 정지
 function stopAlarmSoundOnly() {
   if (STATE.alarmIntervalId) {
     clearInterval(STATE.alarmIntervalId);
@@ -103,7 +103,7 @@ function stopAlarmSoundOnly() {
   }
 }
 
-// 사용자 알람 확인 및 음소거
+// 알람 해제 및 음소거
 function acknowledgeAndStopSound() {
   STATE.isSoundMutedByUser = true;
   stopAlarmSoundOnly();
@@ -112,7 +112,7 @@ function acknowledgeAndStopSound() {
   if (stopBtn) stopBtn.style.display = 'none';
 }
 
-// 경고음 단일 재생
+// 단일 딜레이 비프음 발생
 function playSingleBeepSound() {
   initAudioContext();
   if (!STATE.audioCtx) return;
@@ -123,29 +123,29 @@ function playSingleBeepSound() {
     masterGain.gain.setValueAtTime(0.8, now);
     masterGain.gain.linearRampToValueAtTime(0.001, now + 2.5);
     masterGain.connect(STATE.audioCtx.destination);
-    
-    const osc1 = STATE.audioCtx.createOscillator(); 
-    osc1.frequency.setValueAtTime(1050, now); 
-    osc1.connect(masterGain); 
-    osc1.start(now); 
+
+    const osc1 = STATE.audioCtx.createOscillator();
+    osc1.frequency.setValueAtTime(1050, now);
+    osc1.connect(masterGain);
+    osc1.start(now);
     osc1.stop(now + 1.2);
 
-    const osc2 = STATE.audioCtx.createOscillator(); 
-    osc2.frequency.setValueAtTime(1400, now + 1.2); 
-    osc2.connect(masterGain); 
-    osc2.start(now + 1.2); 
+    const osc2 = STATE.audioCtx.createOscillator();
+    osc2.frequency.setValueAtTime(1400, now + 1.2);
+    osc2.connect(masterGain);
+    osc2.start(now + 1.2);
     osc2.stop(now + 2.5);
   } catch (e) {
     console.error("Audio play error:", e);
   }
 }
 
-// 센서 데이터 API 요청
+// 센서 실시간 데이터 수신
 async function fetchSensorData() {
   try {
     const response = await fetch(`${CONFIG.API_BASE_URL}/api/sensor?range=${STATE.currentRangeMode}`, {
       method: 'POST',
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
         'bypass-tunnel-reminder': 'true'
       },
@@ -153,7 +153,7 @@ async function fetchSensorData() {
     });
 
     if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
-    
+
     const data = await response.json();
 
     if (data && data.result_code === 0) {
@@ -168,22 +168,17 @@ async function fetchSensorData() {
   }
 }
 
-// 대시보드 메인 렌더링
+// 대시보드 타일 및 차트 바인딩
 function renderDashboard(data) {
   setSyncStatus(data.updated_at || '--:--:--', '#38bdf8');
 
-  const catCounts = { 
-    COOLING: { ok: 0, total: 0 }, 
-    FREEZING: { ok: 0, total: 0 }, 
-    OUTDOOR: { ok: 0, total: 0 }
-  };
   const categoryRanges = {};
 
   if (Array.isArray(data.name_list)) {
     data.name_list.forEach((rawName, index) => {
       const mappedConfig = SENSOR_CONFIG[rawName];
       const apiConfig = (data.sensor_configs && data.sensor_configs[index]) || {};
-      
+
       const cfg = {
         name: mappedConfig?.name || apiConfig.name || rawName,
         zone: mappedConfig?.zone || apiConfig.zone || '기타구역',
@@ -202,13 +197,8 @@ function renderDashboard(data) {
 
       const feelsLike = data.feels_like_list ? parseFloat(data.feels_like_list[index]) : temp;
 
-      if (catCounts[cfg.type]) {
-        catCounts[cfg.type].total++;
-        if (!cfg.isWarning) catCounts[cfg.type].ok++;
-      }
-
       if (!categoryRanges[cfg.type] && cfg.min !== undefined && cfg.max !== undefined) {
-        categoryRanges[cfg.type] = `기준: ${cfg.min.toFixed(1)}℃ ~ ${cfg.max.toFixed(1)}℃`;
+        categoryRanges[cfg.type] = `${cfg.min.toFixed(1)}℃ ~ ${cfg.max.toFixed(1)}℃`;
       }
 
       renderSensorTile(index, cfg, temp, hum, feelsLike, cfg.isWarning);
@@ -217,30 +207,17 @@ function renderDashboard(data) {
   }
 
   Object.entries(categoryRanges).forEach(([type, text]) => {
-    const subElem = document.getElementById(`range-subtext-${type}`);
     const headElem = document.getElementById(`header-range-${type}`);
-    if (subElem) subElem.innerText = text;
-    if (headElem) headElem.innerText = text.replace('기준: ', '');
+    if (headElem) headElem.innerText = text;
   });
-
-  const activeTotal = Object.values(catCounts).reduce((acc, cur) => acc + cur.total, 0);
-  
-  const totalElem = document.getElementById('stat-total');
-  const refElem = document.getElementById('stat-ref-status');
-  const freezerElem = document.getElementById('stat-freezer-status');
-  const outdoorElem = document.getElementById('stat-outdoor-status');
-
-  if (totalElem) totalElem.innerText = activeTotal;
-  if (refElem) refElem.innerText = `${catCounts.COOLING.ok} / ${catCounts.COOLING.total}`;
-  if (freezerElem) freezerElem.innerText = `${catCounts.FREEZING.ok} / ${catCounts.FREEZING.total}`;
-  if (outdoorElem) outdoorElem.innerText = `${catCounts.OUTDOOR.ok} / ${catCounts.OUTDOOR.total}`;
 
   const validAlertItems = (data.alert_items || []).filter(item => !CONFIG.EXCLUDED_ALERT_TYPES.includes(item.type));
   showAlertBanner(validAlertItems);
 }
 
-// 가스 데이터 바인딩
+// 가스 탱크 잔량/압력 바인딩
 function renderGasData(data) {
+  if (!data) return;
   const co2 = data.joa_co2 || null;
   const n2 = data.joa_n2 || null;
 
@@ -248,7 +225,7 @@ function renderGasData(data) {
   if (n2) updateSingleGasUI('ln2', n2);
 }
 
-// 개별 가스 위젯 UI 업데이트
+// 가스 탱크 위젯 개별 업데이트
 function updateSingleGasUI(type, info) {
   const fillElem = document.getElementById(`gas-fill-${type}`);
   const pctElem = document.getElementById(`gas-pct-${type}`);
@@ -275,7 +252,7 @@ function updateSingleGasUI(type, info) {
 
   if (statusElem) {
     if (status === 'NORMAL') {
-      statusElem.innerText = '정상';
+      statusElem.innerText = '정상 가동';
       statusElem.className = 'gas-status-badge ok';
     } else {
       statusElem.innerText = status;
@@ -284,7 +261,7 @@ function updateSingleGasUI(type, info) {
   }
 }
 
-// 센서 타일 UI 생성 및 갱신
+// 센서 타일 동적 생성 및 갱신
 function renderSensorTile(index, cfg, temp, hum, feelsLike, isWarning) {
   const tempText = (temp === null) ? '--' : temp.toFixed(1);
   const humText = (hum === null) ? '--' : `${hum.toFixed(1)}%`;
@@ -306,7 +283,7 @@ function renderSensorTile(index, cfg, temp, hum, feelsLike, isWarning) {
           <span class="tile-temp" id="temp-val-${index}">${tempText}</span>
           <span class="tile-temp-unit">℃</span>
         </div>
-        ${cfg.type === 'OUTDOOR' ? `<span class="tile-feels" id="feels-val-${index}">${feelsText}</span>` : ''}
+        ${cfg.type === 'HEAT' ? `<span class="tile-feels" id="feels-val-${index}">${feelsText}</span>` : ''}
       </div>
       <div class="tile-hum" id="hum-val-${index}">${humText}</div>
       <div class="minichart-wrapper">
@@ -328,7 +305,7 @@ function renderSensorTile(index, cfg, temp, hum, feelsLike, isWarning) {
   }
 }
 
-// 미니 차트 생성 및 업데이트 (X축 라벨 스킵 처리 포함)
+// Chart.js 미니 그래프 생성 및 업데이트
 function updateOrCreateMiniChart(index, cfg, currentTemp, time, history) {
   const canvasElem = document.getElementById(`chart-canvas-${index}`);
   if (!canvasElem) return;
@@ -344,7 +321,9 @@ function updateOrCreateMiniChart(index, cfg, currentTemp, time, history) {
 
   let colorPrimary = '#38bdf8';
   if (cfg.type === 'FREEZING') colorPrimary = '#c084fc';
-  if (cfg.type === 'OUTDOOR') colorPrimary = '#fb923c';
+  if (cfg.type === 'PROD1') colorPrimary = '#fb923c';
+  if (cfg.type === 'PROD2') colorPrimary = '#f59e0b';
+  if (cfg.type === 'HEAT') colorPrimary = '#ef4444';
 
   const ctx = canvasElem.getContext('2d');
   const gradient = ctx.createLinearGradient(0, 0, 0, 40);
@@ -355,19 +334,19 @@ function updateOrCreateMiniChart(index, cfg, currentTemp, time, history) {
     type: 'line',
     data: {
       labels: labels,
-      datasets: [{ 
-        data: tempData, 
-        borderColor: colorPrimary, 
-        backgroundColor: gradient, 
-        borderWidth: 1.5, 
-        pointRadius: 0, 
-        pointHoverRadius: 4, 
+      datasets: [{
+        data: tempData,
+        borderColor: colorPrimary,
+        backgroundColor: gradient,
+        borderWidth: 1.5,
+        pointRadius: 0,
+        pointHoverRadius: 4,
         pointHoverBackgroundColor: colorPrimary,
         pointHoverBorderColor: '#ffffff',
         pointHoverBorderWidth: 1.5,
-        fill: true, 
-        tension: 0.2, 
-        spanGaps: true 
+        fill: true,
+        tension: 0.2,
+        spanGaps: true
       }]
     },
     options: {
@@ -375,26 +354,23 @@ function updateOrCreateMiniChart(index, cfg, currentTemp, time, history) {
       maintainAspectRatio: false,
       animation: false,
       interaction: { mode: 'index', intersect: false },
-      // 패딩을 유연하게 조정하여 라벨이 캔버스 내부로 들어오도록 설정
-      layout: { 
-        padding: { top: 4, bottom: 2, left: 0, right: 4 } 
-      },
+      layout: { padding: { top: 4, bottom: 2, left: 0, right: 4 } },
       plugins: {
         legend: { display: false },
         tooltip: {
-          enabled: true, 
-          backgroundColor: 'rgba(15, 23, 42, 0.95)', 
-          titleColor: '#94a3b8', 
+          enabled: true,
+          backgroundColor: 'rgba(15, 23, 42, 0.95)',
+          titleColor: '#94a3b8',
           bodyColor: colorPrimary,
           bodyFont: { weight: 'bold', size: 10 },
           titleFont: { size: 9 },
-          borderColor: '#334155', 
-          borderWidth: 1, 
-          padding: 6, 
+          borderColor: '#334155',
+          borderWidth: 1,
+          padding: 6,
           displayColors: false,
-          callbacks: { 
-            title: ctx => ctx[0].label || '', 
-            label: ctx => `온도: ${ctx.parsed.y != null ? ctx.parsed.y.toFixed(1) : '--'} ℃` 
+          callbacks: {
+            title: ctx => ctx[0].label || '',
+            label: ctx => `온도: ${ctx.parsed.y != null ? ctx.parsed.y.toFixed(1) : '--'} ℃`
           }
         }
       },
@@ -403,12 +379,12 @@ function updateOrCreateMiniChart(index, cfg, currentTemp, time, history) {
           display: true,
           grid: { display: false },
           ticks: {
-            color: '#64748b', 
-            font: { size: 8 }, 
-            maxRotation: 0, 
+            color: '#64748b',
+            font: { size: 8 },
+            maxRotation: 0,
             autoSkip: true,
-            maxTicksLimit: 4, // 작은 미니 차트에 맞춰 라벨 수를 4개 정도로 제한
-            padding: 2,      // 캔버스 하단 경계와의 간격 축소
+            maxTicksLimit: 4,
+            padding: 2,
             callback: function(val) {
               const label = this.getLabelForValue(val);
               if (!label) return '';
@@ -421,14 +397,14 @@ function updateOrCreateMiniChart(index, cfg, currentTemp, time, history) {
           }
         },
         y: {
-          display: true, 
+          display: true,
           grid: { color: 'rgba(255, 255, 255, 0.05)' },
-          ticks: { 
-            color: '#64748b', 
-            font: { size: 7.5 }, 
-            maxTicksLimit: 3, 
+          ticks: {
+            color: '#64748b',
+            font: { size: 7.5 },
+            maxTicksLimit: 3,
             padding: 2,
-            callback: val => typeof val === 'number' ? `${val.toFixed(1)}℃` : val 
+            callback: val => typeof val === 'number' ? `${val.toFixed(1)}℃` : val
           }
         }
       }
@@ -436,7 +412,7 @@ function updateOrCreateMiniChart(index, cfg, currentTemp, time, history) {
   });
 }
 
-// 차트 데이터 가공
+// 그래프 시계열 데이터 파싱
 function prepareChartData(index, time, history) {
   let labels = [];
   let tempData = [];
@@ -501,14 +477,14 @@ function prepareChartData(index, time, history) {
   return { labels, tempData };
 }
 
-// 경고 배너 제어 및 웹 알림 처리
+// 상단 경고 팝업 및 노티
 function showAlertBanner(items) {
   const banner = document.getElementById('alert-banner');
   if (!banner) return;
 
-  STATE.dismissedAlertKeys.forEach(key => { 
+  STATE.dismissedAlertKeys.forEach(key => {
     if (!items.some(i => (i.rawName || i.displayName) === key)) {
-      STATE.dismissedAlertKeys.delete(key); 
+      STATE.dismissedAlertKeys.delete(key);
     }
   });
 
@@ -520,18 +496,18 @@ function showAlertBanner(items) {
   STATE.activeAlertKeys = currentAlarmKeysSet;
 
   if (activeItems.length > 0) {
-    const msg = activeItems.map(i => 
-      `${i.zone}(${i.displayName}) - ${i.type === 'OUTDOOR' ? '체감 ' + i.feelsLike + '℃' : i.temp + '℃'}`
+    const msg = activeItems.map(i =>
+      `${i.zone}(${i.displayName}) - ${i.type === 'HEAT' ? '체감 ' + i.feelsLike + '℃' : i.temp + '℃'}`
     ).join(', ');
-    
+
     const alertMsgElem = document.getElementById('alert-message');
     if (alertMsgElem) alertMsgElem.innerText = `경고 항목: ${msg}`;
-    
+
     banner.classList.add('active');
 
     if (hasNewAlarm) {
-      STATE.isSoundMutedByUser = false; 
-      // startContinuousAlarm();  // 알림음 설정
+      STATE.isSoundMutedByUser = false;
+      //startContinuousAlarm();   // 알림음 소리 
     }
 
     if ("Notification" in window && Notification.permission === "granted") {
@@ -548,13 +524,13 @@ function showAlertBanner(items) {
     STATE.lastNotifiedKeys.clear();
     STATE.isSoundMutedByUser = false;
     stopAlarmSoundOnly();
-    
+
     const stopBtn = document.getElementById('stopAlarmBtn');
     if (stopBtn) stopBtn.style.display = 'none';
   }
 }
 
-// 경고 닫기
+// 경고 창 수동 닫기
 function closeAlert() {
   STATE.currentAlertKeys.forEach(key => STATE.dismissedAlertKeys.add(key));
   const banner = document.getElementById('alert-banner');
@@ -562,7 +538,7 @@ function closeAlert() {
   acknowledgeAndStopSound();
 }
 
-// 차트 조회 범위 변경
+// 조회 기간 모드 변경 (24h / 1h)
 function changeChartRange(mode) {
   if (STATE.currentRangeMode === mode) return;
   STATE.currentRangeMode = mode;
@@ -573,7 +549,7 @@ function changeChartRange(mode) {
   if (btn1h) btn1h.classList.toggle('active', mode === '1h');
 
   const titleText = mode === '24h' ? '24시간 그래프' : '1시간 그래프';
-  ['COOLING', 'FREEZING', 'OUTDOOR'].forEach(type => {
+  ['HEAT', 'PROD1', 'PROD2', 'COOLING', 'FREEZING'].forEach(type => {
     const elem = document.getElementById(`chart-header-title-${type}`);
     if (elem) elem.innerText = titleText;
   });
@@ -581,7 +557,7 @@ function changeChartRange(mode) {
   fetchSensorData();
 }
 
-// 시간 포맷 변환 (초 단위 제거 및 공백 방지)
+// 시간 문자열 서식 정리
 function formatTimeLabel(timeStr) {
   if (!timeStr) return '';
   const timePart = timeStr.trim().includes(' ') ? timeStr.trim().split(' ')[1] : timeStr.trim();
@@ -589,7 +565,7 @@ function formatTimeLabel(timeStr) {
   return parts.length < 2 ? timeStr : `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
 }
 
-// 날짜 Input 초기화
+// 날짜 검색 조건 기본값 세팅
 function initDateInputs() {
   const today = new Date();
   const oneMonthAgo = new Date();
@@ -601,7 +577,7 @@ function initDateInputs() {
   if (fromDateElem) fromDateElem.value = oneMonthAgo.toISOString().split('T')[0];
 }
 
-// 동기화 상태 텍스트 변경
+// 동기화 상태 표시 변경
 function setSyncStatus(text, color) {
   const syncElem = document.getElementById('update-time');
   if (syncElem) {
@@ -610,7 +586,7 @@ function setSyncStatus(text, color) {
   }
 }
 
-// 엑셀 다운로드 모달 열기
+// 엑셀 다운로드 모달 실행
 function downloadExcelModule() {
   const typeElem = document.getElementById('csv-type');
   const fromDateElem = document.getElementById('csv-from-date');
@@ -622,9 +598,9 @@ function downloadExcelModule() {
   const startDate = fromDateElem.value;
   const endDate = toDateElem.value;
 
-  if (!startDate || !endDate) { 
-    alert('조회 기간을 설정해 주세요.'); 
-    return; 
+  if (!startDate || !endDate) {
+    alert('조회 기간을 설정해 주세요.');
+    return;
   }
 
   const typeNames = { '1': '일일 집계', '2': '시간대별 집계', '3': '5분 단위 집계' };
@@ -639,28 +615,28 @@ function downloadExcelModule() {
   if (modalElem) modalElem.style.display = 'flex';
 }
 
-// 다운로드 확인 모달 닫기
+// 엑셀 모달 닫기
 function closeConfirmModal() {
   const modalElem = document.getElementById('customConfirmModal');
   if (modalElem) modalElem.style.display = 'none';
   STATE.pendingDownloadParams = null;
 }
 
-// 엑셀 다운로드 처리
+// 엑셀 다운로드 파일 수신 처리
 async function handleExcelDownload() {
   if (!STATE.pendingDownloadParams) return;
 
   const queryParams = new URLSearchParams(STATE.pendingDownloadParams);
   const downloadUrl = `${CONFIG.API_BASE_URL}/api/excel-download?${queryParams.toString()}`;
-  
+
   try {
     const response = await fetch(downloadUrl, {
-      headers: { 
+      headers: {
         'bypass-tunnel-reminder': 'true'
       }
     });
     if (!response.ok) throw new Error('Download failed');
-    
+
     const blob = await response.blob();
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');

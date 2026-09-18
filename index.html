@@ -12,7 +12,7 @@
 <body>
   <div class="dashboard">
 
-    <!-- 상단 헤더 -->
+    <!-- [상단 헤더] 한 줄 전면 통합 영역 -->
     <header class="header">
       <div class="header-left">
         <div class="logo-wrapper">
@@ -20,8 +20,7 @@
           <span id="logo-fallback" class="logo-fallback" style="display:none;">CHOHEUNG GF</span>
         </div>
         <div class="header-title-box">
-          <h1>스마트 온·습도 통합 관제 시스템</h1>
-          <p>냉장 / 냉동 / 생산현장 및 고압가스 실시간 통합 모니터링</p>
+          <h1>통합 관제 시스템</h1>
         </div>
       </div>
 
@@ -32,12 +31,10 @@
         </div>
 
         <div class="update-badge">동기화: <span id="update-time">--:--</span></div>
-        
-        <button id="stopAlarmBtn" class="btn-stop-alarm" onclick="acknowledgeAndStopSound()">🚨 경고 확인 (소리 끄기)</button>
 
         <div class="excel-control-box">
           <input type="date" id="csv-from-date">
-          <span style="color:#64748b; font-size:11px;">~</span>
+          <span class="date-sep">~</span>
           <input type="date" id="csv-to-date">
           <select id="csv-type">
             <option value="1">일일 집계</option>
@@ -46,175 +43,162 @@
           </select>
           <button type="button" class="btn-excel" onclick="downloadExcelModule()">엑셀 다운로드</button>
         </div>
+
+        <button id="stopAlarmBtn" class="btn-stop-alarm" onclick="acknowledgeAndStopSound()">🚨 경고 확인</button>
       </div>
     </header>
 
-    <!-- 1행: 고압가스 관제 카드 -->
-    <section class="gas-overview-row">
-      <!-- 탄산 (LCO2) -->
-      <div class="gas-card-compact lco2">
-        <div class="gas-tank-visual">
-          <div class="tank-cap">LCO2</div>
-          <div class="tank-body">
-            <div class="tank-fill lco2-fill" id="gas-fill-lco2" style="height: 0%;"></div>
-            <span class="tank-percent" id="gas-pct-lco2">--%</span>
-          </div>
-        </div>
-        <div class="gas-details">
-          <div class="gas-title-line">
-            <span class="gas-name">탄산 (LCO2) 탱크</span>
-            <span class="gas-status-badge ok" id="gas-status-lco2">정상 가동</span>
-          </div>
-          <div class="gas-data-grid">
-            <div class="gas-data-item">
-              <span class="gas-data-label">현재 잔량 / 저장용량</span>
-              <span class="gas-data-value highlight-red" id="gas-weight-lco2">-- kg / -- kg</span>
-            </div>
-            <div class="gas-data-item">
-              <span class="gas-data-label">내부 압력</span>
-              <span class="gas-data-value" id="gas-press-lco2">-- bar</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 질소 (LN2) -->
-      <div class="gas-card-compact ln2">
-        <div class="gas-tank-visual">
-          <div class="tank-cap ln2-cap">LN2</div>
-          <div class="tank-body">
-            <div class="tank-fill ln2-fill" id="gas-fill-ln2" style="height: 0%;"></div>
-            <span class="tank-percent" id="gas-pct-ln2">--%</span>
-          </div>
-        </div>
-        <div class="gas-details">
-          <div class="gas-title-line">
-            <span class="gas-name">질소 (LN2) 탱크</span>
-            <span class="gas-status-badge ok" id="gas-status-ln2">정상 가동</span>
-          </div>
-          <div class="gas-data-grid">
-            <div class="gas-data-item">
-              <span class="gas-data-label">현재 잔량 / 저장용량</span>
-              <span class="gas-data-value highlight-purple" id="gas-weight-ln2">-- kg / -- kg</span>
-            </div>
-            <div class="gas-data-item">
-              <span class="gas-data-label">내부 압력</span>
-              <span class="gas-data-value" id="gas-press-ln2">-- bar</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- 2행: 요약 카운터 -->
-    <section class="summary-overview-row">
-      <div class="summary-grid">
-        <div class="stat-card">
-          <div class="stat-info">
-            <span class="stat-label">전체 관제 센서</span>
-            <span class="stat-subtext">등록 장비</span>
-          </div>
-          <span class="stat-value" id="stat-total">0</span>
-        </div>
-        <div class="stat-card ref">
-          <div class="stat-info">
-            <span class="stat-label">냉장 창고</span>
-            <span class="stat-subtext" id="range-subtext-COOLING">기준: 0.0℃ ~ 5.0℃</span>
-          </div>
-          <span class="stat-value stat-ref-color" id="stat-ref-status">0 / 0</span>
-        </div>
-        <div class="stat-card freezer">
-          <div class="stat-info">
-            <span class="stat-label">냉동 창고</span>
-            <span class="stat-subtext" id="range-subtext-FREEZING">기준: -25.0℃ ~ -18.0℃</span>
-          </div>
-          <span class="stat-value stat-freezer-color" id="stat-freezer-status">0 / 0</span>
-        </div>
-        <div class="stat-card prod1">
-          <div class="stat-info">
-            <span class="stat-label">생산 1팀</span>
-            <span class="stat-subtext" id="range-subtext-PROD1">기준: 0.0℃ ~ 50.0℃</span>
-          </div>
-          <span class="stat-value stat-prod1-color" id="stat-prod1-status">0 / 0</span>
-        </div>
-        <div class="stat-card prod2">
-          <div class="stat-info">
-            <span class="stat-label">생산 2팀</span>
-            <span class="stat-subtext" id="range-subtext-PROD2">기준: 0.0℃ ~ 36.0℃</span>
-          </div>
-          <span class="stat-value stat-prod2-color" id="stat-prod2-status">0 / 0</span>
-        </div>
-      </div>
-    </section>
-
+    <!-- [알림 바] -->
     <div id="alert-banner" class="alert-banner">
       <div><span>[시스템 경고] </span><span id="alert-message">이상 데이터가 감지되었습니다.</span></div>
       <button type="button" onclick="closeAlert()" class="btn-close-alert">[닫기]</button>
     </div>
 
-    <!-- 3행: 4분할 센서 관제 그리드 -->
+    <!-- [메인 3분할 레이아웃] -->
     <main class="main-grid">
-      <!-- 1. 냉장 창고 -->
-      <section class="category-panel">
-        <div class="panel-header">
-          <span class="panel-title"><span class="badge-cat ref">냉장</span> 냉장 창고</span>
-          <span class="range-header-text" id="header-range-COOLING">0.0℃ ~ 5.0℃</span>
-        </div>
-        <div class="table-headers">
-          <div>센서명</div>
-          <div>온도</div>
-          <div>습도</div>
-          <div id="chart-header-title-COOLING">24시간 그래프</div>
-        </div>
-        <div class="sensor-tile-container" id="container-COOLING"></div>
-      </section>
 
-      <!-- 2. 냉동 창고 -->
-      <section class="category-panel">
-        <div class="panel-header">
-          <span class="panel-title"><span class="badge-cat freezer">냉동</span> 냉동 창고</span>
-          <span class="range-header-text" id="header-range-FREEZING">-25.0℃ ~ -18.0℃</span>
-        </div>
-        <div class="table-headers">
-          <div>센서명</div>
-          <div>온도</div>
-          <div>습도</div>
-          <div id="chart-header-title-FREEZING">24시간 그래프</div>
-        </div>
-        <div class="sensor-tile-container" id="container-FREEZING"></div>
-      </section>
+      <!-- ================= 1열 (좌측) ================= -->
+      <div class="column">
+        <!-- 고압가스 카운터 -->
+        <section class="gas-section">
+          <!-- 탄산 (LCO2) -->
+          <div class="gas-card-compact lco2">
+            <div class="gas-tank-visual">
+              <div class="tank-cap">LCO2</div>
+              <div class="tank-body">
+                <div class="tank-fill lco2-fill" id="gas-fill-lco2" style="height: 0%;"></div>
+                <span class="tank-percent" id="gas-pct-lco2">--%</span>
+              </div>
+            </div>
+            <div class="gas-details">
+              <div class="gas-title-line">
+                <span class="gas-name">탄산 (LCO2) 탱크</span>
+                <span class="gas-status-badge ok" id="gas-status-lco2">정상 가동</span>
+              </div>
+              <div class="gas-data-grid">
+                <div class="gas-data-item">
+                  <span class="gas-data-label">잔량 / 저장용량</span>
+                  <span class="gas-data-value highlight-red" id="gas-weight-lco2">-- kg / -- kg</span>
+                </div>
+                <div class="gas-data-item">
+                  <span class="gas-data-label">내부 압력</span>
+                  <span class="gas-data-value" id="gas-press-lco2">-- bar</span>
+                </div>
+              </div>
+            </div>
+          </div>
 
-      <!-- 3. 생산 1팀 -->
-      <section class="category-panel">
-        <div class="panel-header">
-          <span class="panel-title"><span class="badge-cat prod1">생산1팀</span> 생산 1팀</span>
-          <span class="range-header-text" id="header-range-PROD1">0.0℃ ~ 50.0℃</span>
-        </div>
-        <div class="table-headers">
-          <div>센서명</div>
-          <div>온도</div>
-          <div>습도</div>
-          <div id="chart-header-title-PROD1">24시간 그래프</div>
-        </div>
-        <div class="sensor-tile-container" id="container-PROD1"></div>
-      </section>
+          <!-- 질소 (LN2) -->
+          <div class="gas-card-compact ln2">
+            <div class="gas-tank-visual">
+              <div class="tank-cap ln2-cap">LN2</div>
+              <div class="tank-body">
+                <div class="tank-fill ln2-fill" id="gas-fill-ln2" style="height: 0%;"></div>
+                <span class="tank-percent" id="gas-pct-ln2">--%</span>
+              </div>
+            </div>
+            <div class="gas-details">
+              <div class="gas-title-line">
+                <span class="gas-name">질소 (LN2) 탱크</span>
+                <span class="gas-status-badge ok" id="gas-status-ln2">정상 가동</span>
+              </div>
+              <div class="gas-data-grid">
+                <div class="gas-data-item">
+                  <span class="gas-data-label">잔량 / 저장용량</span>
+                  <span class="gas-data-value highlight-purple" id="gas-weight-ln2">-- kg / -- kg</span>
+                </div>
+                <div class="gas-data-item">
+                  <span class="gas-data-label">내부 압력</span>
+                  <span class="gas-data-value" id="gas-press-ln2">-- bar</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
 
-      <!-- 4. 생산 2팀 -->
-      <section class="category-panel">
-        <div class="panel-header">
-          <span class="panel-title"><span class="badge-cat prod2">생산2팀</span> 생산 2팀</span>
-          <span class="range-header-text" id="header-range-PROD2">0.0℃ ~ 36.0℃</span>
-        </div>
-        <div class="table-headers">
-          <div>센서명</div>
-          <div>온도</div>
-          <div>습도</div>
-          <div id="chart-header-title-PROD2">24시간 그래프</div>
-        </div>
-        <div class="sensor-tile-container" id="container-PROD2"></div>
-      </section>
+        <!-- 폭염 관제 패널 -->
+        <section class="category-panel">
+          <div class="panel-header">
+            <span class="panel-title"><span class="badge-cat heat">폭염/온열</span> 폭염/온열 관제</span>
+            <span class="range-header-text" id="header-range-HEAT">야외 / 온열 질환 관리</span>
+          </div>
+          <div class="table-headers">
+            <div>센서명</div>
+            <div>온도</div>
+            <div>습도</div>
+            <div id="chart-header-title-HEAT">24시간 그래프</div>
+          </div>
+          <div class="sensor-tile-container" id="container-HEAT"></div>
+        </section>
+      </div>
+
+      <!-- ================= 2열 (중앙) ================= -->
+      <div class="column">
+        <!-- 상단: 생산 1팀 -->
+        <section class="category-panel">
+          <div class="panel-header">
+            <span class="panel-title"><span class="badge-cat prod1">생산1팀</span> 생산 1팀</span>
+            <span class="range-header-text" id="header-range-PROD1">0.0℃ ~ 50.0℃</span>
+          </div>
+          <div class="table-headers">
+            <div>센서명</div>
+            <div>온도</div>
+            <div>습도</div>
+            <div id="chart-header-title-PROD1">24시간 그래프</div>
+          </div>
+          <div class="sensor-tile-container" id="container-PROD1"></div>
+        </section>
+
+        <!-- 하단: 생산 2팀 -->
+        <section class="category-panel">
+          <div class="panel-header">
+            <span class="panel-title"><span class="badge-cat prod2">생산2팀</span> 생산 2팀</span>
+            <span class="range-header-text" id="header-range-PROD2">0.0℃ ~ 36.0℃</span>
+          </div>
+          <div class="table-headers">
+            <div>센서명</div>
+            <div>온도</div>
+            <div>습도</div>
+            <div id="chart-header-title-PROD2">24시간 그래프</div>
+          </div>
+          <div class="sensor-tile-container" id="container-PROD2"></div>
+        </section>
+      </div>
+
+      <!-- ================= 3열 (우측) ================= -->
+      <div class="column">
+        <!-- 상단: 냉장 창고 -->
+        <section class="category-panel">
+          <div class="panel-header">
+            <span class="panel-title"><span class="badge-cat ref">냉장</span> 냉장 창고</span>
+            <span class="range-header-text" id="header-range-COOLING">0.0℃ ~ 5.0℃</span>
+          </div>
+          <div class="table-headers">
+            <div>센서명</div>
+            <div>온도</div>
+            <div>습도</div>
+            <div id="chart-header-title-COOLING">24시간 그래프</div>
+          </div>
+          <div class="sensor-tile-container" id="container-COOLING"></div>
+        </section>
+
+        <!-- 하단: 냉동 창고 -->
+        <section class="category-panel">
+          <div class="panel-header">
+            <span class="panel-title"><span class="badge-cat freezer">냉동</span> 냉동 창고</span>
+            <span class="range-header-text" id="header-range-FREEZING">-25.0℃ ~ -12.0℃</span>
+          </div>
+          <div class="table-headers">
+            <div>센서명</div>
+            <div>온도</div>
+            <div>습도</div>
+            <div id="chart-header-title-FREEZING">24시간 그래프</div>
+          </div>
+          <div class="sensor-tile-container" id="container-FREEZING"></div>
+        </section>
+      </div>
+
     </main>
-
   </div>
 
   <!-- 엑셀 모달 -->
