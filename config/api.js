@@ -3,7 +3,7 @@ const router = express.Router();
 const oracledb = require('oracledb');
 const ExcelJS = require('exceljs');
 const { SENSOR_CONFIG } = require('./sensorConfig');
-const { getFilteredHistory } = require('./calc');
+const { getFilteredHistory, calculateFeelsLikeTemp } = require('./calc');
 const { sendEmailNotification } = require('./mailService');
 
 module.exports = function (getSensorContext) {
@@ -98,7 +98,6 @@ module.exports = function (getSensorContext) {
       const workbook = new ExcelJS.Workbook();
       workbook.creator = '스마트관제시스템';
 
-      // 최신 5개 관제 카테고리 시트 스펙 적용
       const categorySpecs = [
         { key: 'HEAT', title: '폭염 관제', bgColor: 'FEE2E2' },
         { key: 'PROD1', title: '생산 1팀', bgColor: 'FFEDD5' },
@@ -117,7 +116,6 @@ module.exports = function (getSensorContext) {
 
       const activeSensorNames = Object.keys(SENSOR_CONFIG);
 
-      // 카테고리별 시트 구성
       categorySpecs.forEach(cat => {
         const sheet = workbook.addWorksheet(cat.title);
         const sensorList = activeSensorNames
@@ -129,7 +127,7 @@ module.exports = function (getSensorContext) {
           return;
         }
 
-        // 헤더 1행 생성
+        // 헤더 1행
         const headerRow1 = ['수집일시'];
         sensorList.forEach(s => {
           const colSpan = (s.type === 'HEAT' || s.type === 'GAS') ? 3 : 2;
@@ -140,7 +138,7 @@ module.exports = function (getSensorContext) {
         const r1 = sheet.addRow(headerRow1);
         r1.height = 26;
 
-        // 헤더 2행 생성
+        // 헤더 2행
         const headerRow2 = ['수집일시'];
         sensorList.forEach(s => {
           if (s.type === 'GAS') {
@@ -157,7 +155,6 @@ module.exports = function (getSensorContext) {
         const r2 = sheet.addRow(headerRow2);
         r2.height = 24;
 
-        // 헤더 셀 병합
         sheet.mergeCells(1, 1, 2, 1);
 
         let colIdx = 2;
@@ -169,7 +166,6 @@ module.exports = function (getSensorContext) {
           colIdx += colSpan;
         });
 
-        // 헤더 스타일 적용
         [r1, r2].forEach(row => {
           row.eachCell((cell) => {
             cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: cat.bgColor } };
@@ -179,7 +175,6 @@ module.exports = function (getSensorContext) {
           });
         });
 
-        // 타임스탬프 기준 데이터 매핑
         const timeMap = {};
         if (result.rows && result.rows.length > 0) {
           result.rows.forEach(row => {
@@ -197,15 +192,26 @@ module.exports = function (getSensorContext) {
 
             if (!timeMap[displayTs]) timeMap[displayTs] = {};
 
+            const parsedTemp = (temp !== null && temp !== undefined) ? parseFloat(Number(temp).toFixed(1)) : null;
+            const parsedHum = (hum !== null && hum !== undefined && !isNaN(hum)) ? parseFloat(Number(hum).toFixed(1)) : null;
+
+            // DB에 FEELS_LIKE 값이 없더라도, 온/습도 데이터가 있다면 직접 계산하여 실시간 보완
+            let calculatedFeels = (feels !== null && feels !== undefined && !isNaN(feels)) 
+              ? parseFloat(Number(feels).toFixed(1)) 
+              : null;
+
+            if (calculatedFeels === null && parsedTemp !== null && parsedHum !== null) {
+              calculatedFeels = calculateFeelsLikeTemp(parsedTemp, parsedHum);
+            }
+
             timeMap[displayTs][matchedRawKey] = {
-              temp: (temp !== null && temp !== undefined) ? parseFloat(Number(temp).toFixed(1)) : '',
-              hum: (hum !== null && hum !== undefined && !isNaN(hum)) ? parseFloat(Number(hum).toFixed(1)) : '',
-              feels: (feels !== null && feels !== undefined && !isNaN(feels)) ? parseFloat(Number(feels).toFixed(1)) : ''
+              temp: parsedTemp !== null ? parsedTemp : '',
+              hum: parsedHum !== null ? parsedHum : '',
+              feels: calculatedFeels !== null ? calculatedFeels : ''
             };
           });
         }
 
-        // 컬럼 너비 설정
         sheet.getColumn(1).width = 18;
         const highlightColIndices = new Set();
         let currentColIndex = 2;
@@ -230,7 +236,6 @@ module.exports = function (getSensorContext) {
           }
         });
 
-        // 데이터 행 작성
         const sortedTimeKeys = Object.keys(timeMap).sort().reverse();
 
         sortedTimeKeys.forEach(timeKey => {
@@ -267,7 +272,6 @@ module.exports = function (getSensorContext) {
         });
       });
 
-      // 다운로드 파일명 설정
       const typeNames = { '1': '일일집계', '2': '시간대별집계', '3': '5분단위집계' };
       const dateStr = new Date().toISOString().slice(0, 10);
       const filename = `통합관제리포트_${typeNames[type] || '집계'}_${dateStr}.xlsx`;

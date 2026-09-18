@@ -1,16 +1,16 @@
 // 센서 마스터 정보
 const SENSOR_CONFIG = {
-  '스마트온도계': { name: '공무팀', zone: '야외 현장', type: 'HEAT', min: 0.0, max: 50.0, sensorId: '6281-7088' },
-  '13room':       { name: '야외외부창고', zone: '야외 현장', type: 'HEAT', min: 0.0, max: 50.0, sensorId: '8629-9794' },
-  '2team1':       { name: '쿠커실', zone: '현장 온열', type: 'HEAT', min: 0.0, max: 36.0, sensorId: '7244-3574' },
-  '2team':        { name: '유화솥', zone: '현장 온열', type: 'HEAT', min: 0.0, max: 36.0, sensorId: '4289-4748' },
-  '1팀외박스실':    { name: '1팀외박스실', zone: '현장 온열', type: 'PROD1', min: 0.0, max: 36.0, sensorId: '8555-3600' },
-  '슈레드실1,2라인': { name: '슈레드실1,2라인', zone: '현장 온열', type: 'PROD1', min: 0.0, max: 36.0, sensorId: '7084-4013', channel: 1 },
-  '슈레드실3라인':   { name: '슈레드실3라인', zone: '현장 온열', type: 'PROD1', min: 0.0, max: 36.0, sensorId: '7084-4013', channel: 2 },
-  '2팀천장':      { name: '2팀천장', zone: '현장 온열', type: 'PROD2', min: 0.0, max: 36.0, sensorId: '5704-7896' },
-  '골드포장실':    { name: '골드포장실', zone: '현장 온열', type: 'PROD2', min: 0.0, max: 36.0, sensorId: '9318-2714' },
-  '원료보관실':    { name: '원료보관실', zone: '현장 온열', type: 'PROD2', min: 0.0, max: 36.0, sensorId: '3848-8683', channel: 1 },
-  '소분계량실':    { name: '소분계량실', zone: '현장 온열', type: 'PROD2', min: 0.0, max: 36.0, sensorId: '3848-8683', channel: 2 },
+  '스마트온도계': { name: '공무팀', zone: '야외 현장', type: 'HEAT', min: -18.0, max: 38.0, sensorId: '6281-7088' },
+  '13room':       { name: '야외외부창고', zone: '야외 현장', type: 'HEAT', min: -18.0, max: 38.0, sensorId: '8629-9794' },
+  '2team1':       { name: '쿠커실', zone: '현장 온열', type: 'HEAT', min: -18.0, max: 38.0, sensorId: '7244-3574' },
+  '2team':        { name: '유화솥', zone: '현장 온열', type: 'HEAT', min: -18.0, max: 38.0, sensorId: '4289-4748' },
+  '1팀외박스실':    { name: '1팀외박스실', zone: '현장 온열', type: 'PROD1', min: -18.0, max: 38.0, sensorId: '8555-3600' },
+  '슈레드실1,2라인': { name: '슈레드실1,2라인', zone: '현장 온열', type: 'PROD1', min: -18.0, max: 38.0, sensorId: '7084-4013', channel: 1 },
+  '슈레드실3라인':   { name: '슈레드실3라인', zone: '현장 온열', type: 'PROD1', min: -18.0, max: 38.0, sensorId: '7084-4013', channel: 2 },
+  '2팀천장':      { name: '2팀천장', zone: '현장 온열', type: 'PROD2', min: -18.0, max: 38.0, sensorId: '5704-7896' },
+  '골드포장실':    { name: '골드포장실', zone: '현장 온열', type: 'PROD2', min: -18.0, max: 38.0, sensorId: '9318-2714' },
+  '원료보관실':    { name: '원료보관실', zone: '현장 온열', type: 'PROD2', min: -18.0, max: 38.0, sensorId: '3848-8683', channel: 1 },
+  '소분계량실':    { name: '소분계량실', zone: '현장 온열', type: 'PROD2', min: -18.0, max: 38.0, sensorId: '3848-8683', channel: 2 },
   '10번창고':     { name: '10번냉동창고', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -12.0, sensorId: '9751-1833', channel: 2},
   '11번창고':     { name: '11번냉동창고', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -12.0, sensorId: '9751-1833', channel: 1},
   '스마트센서':   { name: '12번냉동창고', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -5.0, sensorId: '8433-5905', channel: 1 },
@@ -168,7 +168,7 @@ async function fetchSensorData() {
   }
 }
 
-// 대시보드 타일 및 차트 바인딩
+// 대시보드 타일 및 차트 바인딩 (calc.js 체감온도 함수 사용)
 function renderDashboard(data) {
   setSyncStatus(data.updated_at || '--:--:--', '#38bdf8');
 
@@ -195,7 +195,20 @@ function renderDashboard(data) {
       if (isNaN(temp) || temp === 0) temp = null;
       if (isNaN(hum) || hum === 0) hum = null;
 
-      const feelsLike = data.feels_like_list ? parseFloat(data.feels_like_list[index]) : temp;
+      // 체감온도 수신 및 calc.js 연동 예외 처리
+      let feelsLike = null;
+      if (data.feels_like_list && data.feels_like_list[index] !== undefined && data.feels_like_list[index] !== null) {
+        feelsLike = parseFloat(data.feels_like_list[index]);
+      } else if (data.feels_list && data.feels_list[index] !== undefined && data.feels_list[index] !== null) {
+        feelsLike = parseFloat(data.feels_list[index]);
+      }
+
+      // API 결과가 없거나 NaN이면 calc.js의 calculateFeelsLikeTemp 호출
+      if ((feelsLike === null || isNaN(feelsLike)) && temp !== null && hum !== null) {
+        if (typeof calculateFeelsLikeTemp === 'function') {
+          feelsLike = calculateFeelsLikeTemp(temp, hum);
+        }
+      }
 
       if (!categoryRanges[cfg.type] && cfg.min !== undefined && cfg.max !== undefined) {
         categoryRanges[cfg.type] = `${cfg.min.toFixed(1)}℃ ~ ${cfg.max.toFixed(1)}℃`;
@@ -236,7 +249,7 @@ function updateSingleGasUI(type, info) {
   const percent = info.percent ?? 0;
   const weight = info.weight ?? 0;
   const maxWeight = info.max_weight ?? 5000;
-  const pressure = info.pressure ?? 0;
+  const pressure = parseFloat(info.pressure ?? 0);
   const status = info.status ?? 'NORMAL';
 
   if (fillElem) fillElem.style.height = `${Math.min(Math.max(percent, 0), 100)}%`;
@@ -248,7 +261,36 @@ function updateSingleGasUI(type, info) {
     weightElem.innerText = `${formattedWeight} kg / ${formattedMax} kg`;
   }
 
-  if (pressElem) pressElem.innerText = `${pressure} bar`;
+  let pressStatusText = '정상';
+  let pressStatusClass = 'normal';
+
+  if (type === 'lco2') {
+    if (pressure < 10.0) {
+      pressStatusText = '저압력 (<10bar)';
+      pressStatusClass = 'low';
+    } else if (pressure > 20.0) {
+      pressStatusText = '고압력 (>20bar)';
+      pressStatusClass = 'high';
+    } else {
+      pressStatusText = '정상 (10~20bar)';
+      pressStatusClass = 'normal';
+    }
+  } else if (type === 'ln2') {
+    if (pressure < 8.0) {
+      pressStatusText = '저압력 (<8bar)';
+      pressStatusClass = 'low';
+    } else if (pressure > 20.0) {
+      pressStatusText = '고압력 (>20bar)';
+      pressStatusClass = 'high';
+    } else {
+      pressStatusText = '정상 (8~20bar)';
+      pressStatusClass = 'normal';
+    }
+  }
+
+  if (pressElem) {
+    pressElem.innerHTML = `${pressure} bar <span class="press-status-tag ${pressStatusClass}">${pressStatusText}</span>`;
+  }
 
   if (statusElem) {
     if (status === 'NORMAL') {
@@ -265,7 +307,10 @@ function updateSingleGasUI(type, info) {
 function renderSensorTile(index, cfg, temp, hum, feelsLike, isWarning) {
   const tempText = (temp === null) ? '--' : temp.toFixed(1);
   const humText = (hum === null) ? '--' : `${hum.toFixed(1)}%`;
-  const feelsText = (feelsLike === null) ? '' : `체감 ${feelsLike.toFixed(1)}℃`;
+  
+  const feelsText = (feelsLike !== null && !isNaN(feelsLike)) 
+    ? `체감 ${Number(feelsLike).toFixed(1)}℃` 
+    : (temp !== null ? `체감 ${temp.toFixed(1)}℃` : '');
 
   let tile = document.getElementById(`sensor-tile-${index}`);
 
@@ -301,7 +346,7 @@ function renderSensorTile(index, cfg, temp, hum, feelsLike, isWarning) {
 
     if (tempElem) tempElem.innerText = tempText;
     if (humElem) humElem.innerText = humText;
-    if (feelsElem) feelsElem.innerText = feelsText;
+    if (feelsElem && cfg.type === 'HEAT') feelsElem.innerText = feelsText;
   }
 }
 
@@ -497,7 +542,7 @@ function showAlertBanner(items) {
 
   if (activeItems.length > 0) {
     const msg = activeItems.map(i =>
-      `${i.zone}(${i.displayName}) - ${i.type === 'HEAT' ? '체감 ' + i.feelsLike + '℃' : i.temp + '℃'}`
+      `${i.zone}(${i.displayName}) - ${i.type === 'HEAT' ? '체감 ' + (i.feelsLike || i.temp) + '℃' : i.temp + '℃'}`
     ).join(', ');
 
     const alertMsgElem = document.getElementById('alert-message');
@@ -507,7 +552,7 @@ function showAlertBanner(items) {
 
     if (hasNewAlarm) {
       STATE.isSoundMutedByUser = false;
-      //startContinuousAlarm();   // 알림음 소리 
+      //startContinuousAlarm();
     }
 
     if ("Notification" in window && Notification.permission === "granted") {
