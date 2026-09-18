@@ -404,7 +404,7 @@ html, body {
 }
 
 .tile-temp {
-  font-size: 16px;
+  font-size: 20px;
   font-family: 'Consolas', monospace;
   color: #ffffff;
 }
@@ -457,11 +457,78 @@ html, body {
 .btn-modal-confirm { flex: 1; padding: 8px 0; border-radius: 5px; border: none; background: #10b981; color: #fff; font-size: 12px; cursor: pointer; }
 .btn-modal-cancel { flex: 1; padding: 8px 0; border-radius: 5px; border: 1px solid #334155; background: #1e293b; color: #94a3b8; font-size: 12px; cursor: pointer; }
 
-/* 모바일 모드 대응 */
+
+/* ==========================================================================
+   📱 모바일 / 태블릿 반응형 스타일 (핵심 수정)
+   ========================================================================== */
 @media screen and (max-width: 1024px) {
-  html, body { height: auto; overflow-y: auto; padding: 8px; }
-  .header { flex-direction: column; gap: 10px; align-items: stretch; }
-  .status-panel { flex-wrap: wrap; }
-  .main-grid { grid-template-columns: 1fr; height: auto; }
-  .category-panel { height: auto; }
+  html, body {
+    height: auto !important;
+    overflow-y: auto !important; /* 모바일에서 세로 스크롤 활성화 */
+    padding: 8px;
+  }
+
+  .dashboard {
+    height: auto !important;
+  }
+
+  .header {
+    flex-direction: column;
+    gap: 10px;
+    align-items: stretch;
+  }
+
+  .status-panel {
+    flex-wrap: wrap;
+    justify-content: space-between;
+  }
+
+  .excel-control-box {
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+
+  /* 세로 1열 배치 */
+  .main-grid {
+    grid-template-columns: 1fr !important;
+    height: auto !important;
+  }
+
+  .column {
+    height: auto !important;
+  }
+
+  .category-panel {
+    height: auto !important;
+    min-height: auto !important;
+  }
+
+  .sensor-tile-container {
+    height: auto !important;
+    overflow-y: visible !important;
+  }
+
+  /* 모바일용 센서 타일 비율 변경 */
+  .table-headers, .sensor-tile {
+    grid-template-columns: 90px 60px 45px 1fr !important;
+    padding: 6px 8px;
+  }
+
+  .tile-name {
+    font-size: 13px;
+  }
+
+  .tile-temp {
+    font-size: 16px;
+  }
+
+  .tile-hum {
+    font-size: 13px;
+  }
+
+  .minichart-wrapper {
+    height: 45px !important;
+    min-height: 40px !important;
+  }
 }
