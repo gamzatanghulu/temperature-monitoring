@@ -371,10 +371,10 @@ html, body {
 
 /* 태그 꺼짐 (비활성화 상태) */
 .gas-tag.off {
-  background: #141c2b;
-  color: #475569;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  opacity: 0.4;
+  background: #162032;
+  color: #94a3b8;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  opacity: 0.6;
 }
 
 /* 태그 활성화: 정상 / 적정량 (초록) */
@@ -426,7 +426,6 @@ html, body {
   align-items: center;
 }
 
-/* 단계별 기본 디자인 (비활성화 상태: 어둡게 표현) */
 .tile-step {
   display: flex;
   flex-direction: column;
@@ -437,11 +436,11 @@ html, body {
   font-size: 8.5px;
   line-height: 1.1;
   text-align: center;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1); /* 테두리도 조금 더 선명하게 조정 */
   background: #090e17;
-  color: #475569;
-  opacity: 0.25; /* 비활성 상태 */
-  filter: grayscale(80%);
+  color: #94a3b8; /* 글자색도 약간 밝은 톤으로 변경 (#475569 -> #94a3b8) */
+  opacity: 0.6; /* 비활성화 상태 밝기 올림 */
+  filter: grayscale(40%); /* 회색조를 줄여 은은하게 형태가 보이도록 설정 */
   transition: all 0.3s ease;
 }
 
