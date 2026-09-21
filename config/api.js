@@ -8,14 +8,46 @@ const { sendEmailNotification } = require('./mailService');
 
 module.exports = function (getSensorContext) {
 
+  // 센서 데이터에 체감온도(feels_like_list) 동적 병합 헬퍼 함수
+  function attachFeelsLikeData(cachedData) {
+    if (!cachedData || !Array.isArray(cachedData.data_list_1)) return cachedData;
+
+    const temps = cachedData.data_list_1;
+    const hums = cachedData.data_list_2 || [];
+    const names = cachedData.name_list || [];
+
+    const feelsLikeList = temps.map((tVal, idx) => {
+      const temp = parseFloat(tVal);
+      const hum = parseFloat(hums[idx]);
+      const rawName = names[idx];
+      const cfg = SENSOR_CONFIG[rawName];
+
+      // HEAT(온열) 구역 센서이면서 온도/습도 값이 유효한 경우 체감온도 산출
+      if (cfg && cfg.type === 'HEAT' && !isNaN(temp) && !isNaN(hum)) {
+        return calculateFeelsLikeTemp(temp, hum);
+      }
+      // 일반 센서이거나 습도 데이터가 없는 경우 기본 온도값 반환
+      return !isNaN(temp) ? temp : null;
+    });
+
+    return {
+      ...cachedData,
+      feels_like_list: feelsLikeList,
+      feels_list: feelsLikeList // 구버전 프론트엔드 호환용
+    };
+  }
+
   // 실시간 센서 데이터 조회 (GET)
   router.get('/sensor', (req, res) => {
     const { cachedSensorData, sensorHistory } = getSensorContext();
     const range = req.query.range || req.query.timeRange || '24h';
     const filteredHistory = getFilteredHistory(sensorHistory, range);
     
+    // 체감온도 계산 로직 반영
+    const enrichedData = attachFeelsLikeData(cachedSensorData);
+
     res.json({ 
-      ...cachedSensorData, 
+      ...enrichedData, 
       history: filteredHistory, 
       raw_configs: SENSOR_CONFIG 
     });
@@ -27,8 +59,11 @@ module.exports = function (getSensorContext) {
     const range = req.body.range || req.query.range || '24h';
     const filteredHistory = getFilteredHistory(sensorHistory, range);
 
+    // 체감온도 계산 로직 반영
+    const enrichedData = attachFeelsLikeData(cachedSensorData);
+
     res.json({ 
-      ...cachedSensorData, 
+      ...enrichedData, 
       history: filteredHistory, 
       raw_configs: SENSOR_CONFIG 
     });
@@ -50,7 +85,7 @@ module.exports = function (getSensorContext) {
     }
   });
 
-  // 엑셀 다운로드 처리 (시트 카테고리 최신화)
+  // 엑셀 다운로드 처리 (체감온도 수식 일관성 적용)
   router.get('/excel-download', async (req, res) => {
     let conn;
     try {
@@ -195,13 +230,12 @@ module.exports = function (getSensorContext) {
             const parsedTemp = (temp !== null && temp !== undefined) ? parseFloat(Number(temp).toFixed(1)) : null;
             const parsedHum = (hum !== null && hum !== undefined && !isNaN(hum)) ? parseFloat(Number(hum).toFixed(1)) : null;
 
-            // DB에 FEELS_LIKE 값이 없더라도, 온/습도 데이터가 있다면 직접 계산하여 실시간 보완
-            let calculatedFeels = (feels !== null && feels !== undefined && !isNaN(feels)) 
-              ? parseFloat(Number(feels).toFixed(1)) 
-              : null;
-
-            if (calculatedFeels === null && parsedTemp !== null && parsedHum !== null) {
+            // calc.js 수식을 이용하여 엑셀 리포트 내 체감온도 보완 계산
+            let calculatedFeels = null;
+            if (cfg.type === 'HEAT' && parsedTemp !== null && parsedHum !== null) {
               calculatedFeels = calculateFeelsLikeTemp(parsedTemp, parsedHum);
+            } else if (feels !== null && feels !== undefined && !isNaN(feels)) {
+              calculatedFeels = parseFloat(Number(feels).toFixed(1));
             }
 
             timeMap[displayTs][matchedRawKey] = {

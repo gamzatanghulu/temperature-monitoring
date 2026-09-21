@@ -76,13 +76,28 @@
                 <span class="gas-status-badge ok" id="gas-status-lco2">정상 가동</span>
               </div>
               <div class="gas-data-grid">
+                <!-- 잔량 및 잔량 상태 태그 -->
                 <div class="gas-data-item">
-                  <span class="gas-data-label">잔량 / 저장용량</span>
+                  <div class="gas-data-header-flex">
+                    <span class="gas-data-label">잔량 / 저장용량</span>
+                    <div class="gas-tag-group" id="gas-weight-status-lco2">
+                      <span class="gas-tag off">과부족</span>
+                      <span class="gas-tag off">적정량</span>
+                    </div>
+                  </div>
                   <span class="gas-data-value highlight-red" id="gas-weight-lco2">-- kg / -- kg</span>
                 </div>
+                <!-- 내부 압력 및 압력 3단계 태그 -->
                 <div class="gas-data-item">
-                  <span class="gas-data-label">내부 압력</span>
-                  <span class="gas-data-value" id="gas-press-lco2">-- bar</span>
+                  <div class="gas-data-header-flex">
+                    <span class="gas-data-label">내부 압력</span>
+                    <div class="gas-tag-group" id="gas-press-status-lco2">
+                      <span class="gas-tag off">저압</span>
+                      <span class="gas-tag off">정상 (10~20bar)</span>
+                      <span class="gas-tag off">고압</span>
+                    </div>
+                  </div>
+                  <span class="gas-data-value" id="gas-press-val-lco2">-- bar</span>
                 </div>
               </div>
             </div>
@@ -103,13 +118,28 @@
                 <span class="gas-status-badge ok" id="gas-status-ln2">정상 가동</span>
               </div>
               <div class="gas-data-grid">
+                <!-- 잔량 및 잔량 상태 태그 -->
                 <div class="gas-data-item">
-                  <span class="gas-data-label">잔량 / 저장용량</span>
+                  <div class="gas-data-header-flex">
+                    <span class="gas-data-label">잔량 / 저장용량</span>
+                    <div class="gas-tag-group" id="gas-weight-status-ln2">
+                      <span class="gas-tag off">과부족</span>
+                      <span class="gas-tag off">적정량</span>
+                    </div>
+                  </div>
                   <span class="gas-data-value highlight-purple" id="gas-weight-ln2">-- kg / -- kg</span>
                 </div>
+                <!-- 내부 압력 및 압력 3단계 태그 -->
                 <div class="gas-data-item">
-                  <span class="gas-data-label">내부 압력</span>
-                  <span class="gas-data-value" id="gas-press-ln2">-- bar</span>
+                  <div class="gas-data-header-flex">
+                    <span class="gas-data-label">내부 압력</span>
+                    <div class="gas-tag-group" id="gas-press-status-ln2">
+                      <span class="gas-tag off">저압</span>
+                      <span class="gas-tag off">정상 (8~20bar)</span>
+                      <span class="gas-tag off">고압</span>
+                    </div>
+                  </div>
+                  <span class="gas-data-value" id="gas-press-val-ln2">-- bar</span>
                 </div>
               </div>
             </div>
@@ -119,39 +149,15 @@
         <!-- 폭염 관제 패널 -->
         <section class="category-panel">
           <div class="panel-header">
-            <span class="panel-title"><span class="badge-cat heat">폭염/온열</span> 폭염/온열 관제</span>
+            <span class="panel-title">폭염/온열 관제</span>
             <span class="range-header-text" id="header-range-HEAT">야외 / 온열 질환 관리</span>
           </div>
 
-          <!-- 폭염 단계별 기준 범례 바 -->
-          <div class="heat-guide-bar">
-            <div class="heat-step step-normal">
-              <span class="step-range">~30.9℃</span>
-              <span class="step-label">정상</span>
-            </div>
-            <div class="heat-step step-interest">
-              <span class="step-range">31~32.9℃</span>
-              <span class="step-label">관심</span>
-            </div>
-            <div class="heat-step step-caution">
-              <span class="step-range">33~34.9℃</span>
-              <span class="step-label">주의</span>
-            </div>
-            <div class="heat-step step-warn">
-              <span class="step-range">35~37.9℃</span>
-              <span class="step-label">경고</span>
-            </div>
-            <div class="heat-step step-danger">
-              <span class="step-range">38℃~</span>
-              <span class="step-label">위험</span>
-            </div>
-          </div>
-
-          <div class="table-headers">
+          <div class="table-headers table-headers-heat">
             <div>센서명</div>
             <div>온도</div>
             <div>습도</div>
-            <div id="chart-header-title-HEAT">24시간 그래프</div>
+            <div id="chart-header-title-HEAT">폭염/온열 단계</div>
           </div>
           <div class="sensor-tile-container" id="container-HEAT"></div>
         </section>
@@ -162,7 +168,7 @@
         <!-- 상단: 생산 1팀 -->
         <section class="category-panel">
           <div class="panel-header">
-            <span class="panel-title"><span class="badge-cat prod1">생산1팀</span> 생산 1팀</span>
+            <span class="panel-title">생산 1팀</span>
             <span class="range-header-text" id="header-range-PROD1">0.0℃ ~ 50.0℃</span>
           </div>
           <div class="table-headers">
@@ -177,7 +183,7 @@
         <!-- 하단: 생산 2팀 -->
         <section class="category-panel">
           <div class="panel-header">
-            <span class="panel-title"><span class="badge-cat prod2">생산2팀</span> 생산 2팀</span>
+            <span class="panel-title">생산 2팀</span>
             <span class="range-header-text" id="header-range-PROD2">0.0℃ ~ 36.0℃</span>
           </div>
           <div class="table-headers">
@@ -195,7 +201,7 @@
         <!-- 상단: 냉장 창고 -->
         <section class="category-panel">
           <div class="panel-header">
-            <span class="panel-title"><span class="badge-cat ref">냉장</span> 냉장 창고</span>
+            <span class="panel-title">냉장 창고</span>
             <span class="range-header-text" id="header-range-COOLING">0.0℃ ~ 5.0℃</span>
           </div>
           <div class="table-headers">
@@ -210,7 +216,7 @@
         <!-- 하단: 냉동 창고 -->
         <section class="category-panel">
           <div class="panel-header">
-            <span class="panel-title"><span class="badge-cat freezer">냉동</span> 냉동 창고</span>
+            <span class="panel-title">냉동 창고</span>
             <span class="range-header-text" id="header-range-FREEZING">-25.0℃ ~ -12.0℃</span>
           </div>
           <div class="table-headers">
