@@ -24,7 +24,7 @@
   --status-warn: #ef4444;
 }
 
-/* 기본 여백 초기화 및 폰트 지정 */
+/* 여백 초기화 및 폰트 설정 */
 * {
   margin: 0;
   padding: 0;
@@ -42,7 +42,7 @@ html, body {
   overflow: hidden;
 }
 
-/* 대시보드 전체 컨테이너 */
+/* 대시보드 메인 레이아웃 */
 .dashboard {
   width: 100%;
   height: 100%;
@@ -51,15 +51,17 @@ html, body {
   gap: 5px;
 }
 
-/* 상단 메인 헤더 */
+/* 상단 헤더 컨테이너 (겹침 방지 flex-wrap 추가) */
 .header {
-  position: relative; /* 가운데 정렬 위치 기준선 */
+  position: relative;
   background: linear-gradient(180deg, #131c2e 0%, var(--bg-card) 100%);
-  padding: 5px 12px;
+  padding: 6px 12px;
   border-radius: 6px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
   border: 1px solid var(--border);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
   flex-shrink: 0;
@@ -70,7 +72,7 @@ html, body {
   display: flex;
   align-items: center;
   gap: 10px;
-  z-index: 2; /* 타이틀 뒤로 깔림 방지 */
+  flex-shrink: 0;
 }
 
 /* 로고 프레임 */
@@ -82,35 +84,35 @@ html, body {
   align-items: center;
 }
 
-/* 이미지 로고 및 텍스트 대체 */
-.company-logo { height: 40px; object-fit: contain; }
+/* 로고 이미지 및 대체 텍스트 */
+.company-logo { height: 36px; object-fit: contain; }
 .logo-fallback { background: #1d4ed8; color: #fff; font-size: 10.5px; padding: 2px 5px; border-radius: 3px; }
 
-/* 시스템 타이틀 박스 및 텍스트 (정중앙 중앙 정렬) */
+/* 중앙 시스템 타이틀 박스 (absolute 제거로 겹침 현상 해결) */
 .header-title-box {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 1;
-  pointer-events: none; /* 클릭 이벤트 방해 방지 */
+  flex: 1;
+  text-align: center;
+  min-width: 200px;
 }
 
+/* 메인 타이틀 텍스트 */
 .header-title-box h1 {
-  font-size: 30px;
+  font-size: 24px;
   color: #ffffff;
   letter-spacing: -0.3px;
   white-space: nowrap;
 }
 
-/* 우측 상태 설정 패널 */
+/* 우측 컨트롤 및 상태 패널 */
 .status-panel {
   display: flex;
   align-items: center;
   gap: 8px;
-  z-index: 2; /* 타이틀 뒤로 깔림 방지 */
+  flex-wrap: wrap;
+  flex-shrink: 0;
 }
 
-/* 조회 범위 토글 버튼 그룹 */
+/* 조회 범위 버튼 그룹 */
 .range-toggle-group {
   display: flex;
   background: #090d16;
@@ -131,14 +133,14 @@ html, body {
   cursor: pointer;
 }
 
-/* 범위 활성화 상태 버튼 */
+/* 범위 버튼 활성화 상태 */
 .btn-range.active {
   background: #0284c7;
   color: #ffffff;
   box-shadow: 0 0 8px rgba(2, 132, 199, 0.5);
 }
 
-/* 실시간 동기화 시간 뱃지 */
+/* 동기화 시간 뱃지 */
 .update-badge {
   font-size: 10.5px;
   background: #090d16;
@@ -146,6 +148,7 @@ html, body {
   padding: 3px 8px;
   border-radius: 4px;
   border: 1px solid var(--border);
+  white-space: nowrap;
 }
 .update-badge span { color: var(--color-ref); font-family: 'Consolas', monospace; }
 
@@ -160,7 +163,7 @@ html, body {
   border: 1px solid var(--border);
 }
 
-/* 엑셀 폼 선택 요소 */
+/* 엑셀 입력 요소 스타일 */
 .excel-control-box input, .excel-control-box select {
   padding: 2px 5px;
   font-size: 10.5px;
@@ -171,7 +174,7 @@ html, body {
   outline: none;
 }
 
-/* 날짜 구분 물결표시 */
+/* 날짜 구분 물결 기호 */
 .date-sep { color: #64748b; font-size: 10.5px; }
 
 /* 엑셀 생성 버튼 */
@@ -183,9 +186,10 @@ html, body {
   border-radius: 3px;
   cursor: pointer;
   font-size: 10.5px;
+  white-space: nowrap;
 }
 
-/* 경고음 해제 버튼 */
+/* 알람 해제 버튼 */
 .btn-stop-alarm {
   display: none;
   background: #dc2626;
@@ -198,13 +202,13 @@ html, body {
   animation: pulse-btn 0.8s infinite alternate;
 }
 
-/* 경고 버튼 펄스 효과 */
+/* 알람 버튼 애니메이션 */
 @keyframes pulse-btn {
   from { transform: scale(1); }
   to { transform: scale(1.04); }
 }
 
-/* 긴급 상단 팝업 띠 */
+/* 알림 배너 */
 .alert-banner {
   display: none;
   background: #7f1d1d;
@@ -220,7 +224,7 @@ html, body {
 .alert-banner.active { display: flex; }
 .btn-close-alert { background: none; border: none; color: inherit; cursor: pointer; font-size: 10.5px; }
 
-/* 3열 레이아웃 메인 그리드 */
+/* 메인 3열 그리드 레이아웃 */
 .main-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -229,7 +233,7 @@ html, body {
   min-height: 0;
 }
 
-/* 세로 정렬 컬럼 */
+/* 세로 그리드 컬럼 */
 .column {
   display: flex;
   flex-direction: column;
@@ -238,7 +242,7 @@ html, body {
   min-height: 0;
 }
 
-/* 고압 가스 전체 컨테이너 */
+/* 고압 가스 위젯 섹션 */
 .gas-section {
   display: flex;
   flex-direction: column;
@@ -246,7 +250,7 @@ html, body {
   flex-shrink: 0;
 }
 
-/* 고압 가스 위젯 카드 */
+/* 고압 가스 카드 */
 .gas-card-compact {
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -257,11 +261,11 @@ html, body {
   gap: 14px;
 }
 
-/* 탄산 및 질소 왼쪽 강조선 */
+/* 가스 종류별 포인트 테두리 */
 .gas-card-compact.lco2 { border-left: 6px solid #ef4444; }
 .gas-card-compact.ln2 { border-left: 6px solid #3b82f6; }
 
-/* 가스 탱크 수위 프레임 */
+/* 가스 탱크 수위 레이아웃 */
 .gas-tank-visual {
   display: flex;
   flex-direction: column;
@@ -280,7 +284,7 @@ html, body {
 }
 .tank-cap.ln2-cap { background: #3b82f6; }
 
-/* 탱크 그래픽 외곽 */
+/* 탱크 외곽 그래픽 */
 .tank-body {
   width: 50px;
   height: 54px;
@@ -294,24 +298,24 @@ html, body {
   justify-content: center;
 }
 
-/* 탱크 잔량 게이지 */
+/* 탱크 수위 내부 차오름 */
 .tank-fill { position: absolute; bottom: 0; left: 0; right: 0; }
 .lco2-fill { background: rgba(239, 68, 68, 0.4); border-top: 2px solid #ef4444; }
 .ln2-fill { background: rgba(59, 130, 246, 0.4); border-top: 2px solid #3b82f6; }
 
-/* 탱크 백분율 표기 */
+/* 탱크 잔량 퍼센트 텍스트 */
 .tank-percent { position: relative; z-index: 2; font-size: 14px; color: #ffffff; font-weight: bold; }
 
-/* 가스 상세 정보 데이터 라인 */
+/* 가스 상세 수치 영역 */
 .gas-details { display: flex; flex-direction: column; gap: 6px; flex: 1; }
 
-/* 가스 헤더 상단 라인 */
+/* 가스 카드 타이틀 라인 */
 .gas-title-line { display: flex; align-items: center; justify-content: space-between; }
 
-/* 가스명 폰트 */
+/* 가스 이름 */
 .gas-name { font-size: 16px; color: #ffffff; letter-spacing: -0.3px; font-weight: bold; }
 
-/* 정상 작동 상태 표시 */
+/* 가스 작동 상태 뱃지 */
 .gas-status-badge.ok {
   background: rgba(16, 185, 129, 0.15);
   color: #34d399;
@@ -329,7 +333,7 @@ html, body {
   border-radius: 4px;
 }
 
-/* 수치 수집 표 그리드 (가스 잔량 / 압력) */
+/* 가스 데이터 박스 Grid */
 .gas-data-grid {
   display: flex;
   flex-direction: column;
@@ -340,27 +344,27 @@ html, body {
   border: 1px solid var(--border);
 }
 
-/* 수치 데이터 항목 정의 */
+/* 가스 데이터 단일 항목 */
 .gas-data-item { display: flex; flex-direction: column; gap: 2px; }
 
-/* 수치 항목 헤더 Flex (라벨 + 상태 태그) */
+/* 가스 데이터 헤더 */
 .gas-data-header-flex {
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
-/* 수치 라벨 */
+/* 가스 수치 라벨 */
 .gas-data-label { font-size: 11px; color: var(--text-secondary); }
 
-/* 동적 태그 그룹 컨테이너 */
+/* 가스 상태 태그 그룹 */
 .gas-tag-group {
   display: flex;
   align-items: center;
   gap: 3px;
 }
 
-/* 가스 상태 개별 태그 디자인 */
+/* 개별 가스 상태 태그 */
 .gas-tag {
   font-size: 15px;
   padding: 3px 8px;
@@ -369,7 +373,7 @@ html, body {
   transition: all 0.2s ease;
 }
 
-/* 태그 꺼짐 (비활성화 상태) */
+/* 태그 비활성화 상태 */
 .gas-tag.off {
   background: #162032;
   color: #94a3b8;
@@ -377,7 +381,7 @@ html, body {
   opacity: 0.6;
 }
 
-/* 태그 활성화: 정상 / 적정량 (초록) */
+/* 태그 정상 활성화 */
 .gas-tag.active-ok {
   background: rgba(16, 185, 129, 0.2);
   color: #34d399;
@@ -385,7 +389,7 @@ html, body {
   box-shadow: 0 0 6px rgba(16, 185, 129, 0.3);
 }
 
-/* 태그 활성화: 주의 / 과부족 / 저압 (주황/파랑) */
+/* 태그 주의 활성화 */
 .gas-tag.active-warn {
   background: rgba(245, 158, 11, 0.2);
   color: #fbbf24;
@@ -393,7 +397,7 @@ html, body {
   box-shadow: 0 0 6px rgba(245, 158, 11, 0.3);
 }
 
-/* 태그 활성화: 고압 / 위험 (빨강) */
+/* 태그 위험 활성화 */
 .gas-tag.active-danger {
   background: rgba(239, 68, 68, 0.25);
   color: #f87171;
@@ -401,7 +405,7 @@ html, body {
   box-shadow: 0 0 6px rgba(239, 68, 68, 0.4);
 }
 
-/* 숫자로 표기되는 값 */
+/* 가스 수치 표시 텍스트 */
 .gas-data-value { 
   font-size: 15px; 
   font-family: 'Consolas', monospace; 
@@ -410,13 +414,11 @@ html, body {
   gap: 6px; 
 }
 
-/* 하이라이트 텍스트 컬러 */
+/* 중요 수치 강조 컬러 */
 .highlight-red { color: #f87171; }
 .highlight-purple { color: #c084fc; }
 
-/* ========================================================= */
-/* 폭염 5단계 레벨 바 전용 CSS (그래프 대체 영역)             */
-/* ========================================================= */
+/* 폭염 레벨바 컨테이너 */
 .heat-tile-level-bar {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
@@ -426,6 +428,7 @@ html, body {
   align-items: center;
 }
 
+/* 폭염 단계별 타일 */
 .tile-step {
   display: flex;
   flex-direction: column;
@@ -436,26 +439,28 @@ html, body {
   font-size: 8.5px;
   line-height: 1.1;
   text-align: center;
-  border: 1px solid rgba(255, 255, 255, 0.1); /* 테두리도 조금 더 선명하게 조정 */
+  border: 1px solid rgba(255, 255, 255, 0.1);
   background: #090e17;
-  color: #94a3b8; /* 글자색도 약간 밝은 톤으로 변경 (#475569 -> #94a3b8) */
-  opacity: 0.6; /* 비활성화 상태 밝기 올림 */
-  filter: grayscale(40%); /* 회색조를 줄여 은은하게 형태가 보이도록 설정 */
+  color: #94a3b8;
+  opacity: 0.6;
+  filter: grayscale(40%);
   transition: all 0.3s ease;
 }
 
+/* 레벨 수치 범위 */
 .tile-step .step-range {
   font-size: 10px;
   font-weight: bold;
   font-family: 'Consolas', monospace;
 }
 
+/* 레벨 라벨 */
 .tile-step .step-label {
   font-size: 10.5px;
   margin-top: 1px;
 }
 
-/* [활성화(active) 조건에 맞는 단계를 불 들어오게 설정] */
+/* 레벨 타일 활성화 */
 .tile-step.active {
   opacity: 1 !important;
   filter: grayscale(0%) !important;
@@ -463,14 +468,14 @@ html, body {
   box-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
 }
 
-/* 각 단계별 커스텀 활성화 컬러 지정 */
+/* 폭염 단계별 컬러 지정 */
 .tile-step.step-normal.active { background: rgba(16, 185, 129, 0.25); color: #34d399; border-color: #10b981; box-shadow: 0 0 8px rgba(16, 185, 129, 0.4); }
 .tile-step.step-interest.active { background: rgba(59, 130, 246, 0.25); color: #60a5fa; border-color: #3b82f6; box-shadow: 0 0 8px rgba(59, 130, 246, 0.4); }
 .tile-step.step-caution.active { background: rgba(245, 158, 11, 0.25); color: #fbbf24; border-color: #f59e0b; box-shadow: 0 0 8px rgba(245, 158, 11, 0.4); }
 .tile-step.step-warn.active { background: rgba(249, 115, 22, 0.25); color: #fb923c; border-color: #f97316; box-shadow: 0 0 8px rgba(249, 115, 22, 0.4); }
 .tile-step.step-danger.active { background: rgba(239, 68, 68, 0.3); color: #f87171; border-color: #ef4444; box-shadow: 0 0 8px rgba(239, 68, 68, 0.5); }
 
-/* 공통 관제 패널 박스 */
+/* 일반 관제 패널 박스 */
 .category-panel {
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -483,7 +488,7 @@ html, body {
   min-height: 0;
 }
 
-/* 카테고리 패널 헤더 */
+/* 패널 상단 헤더 */
 .panel-header {
   display: flex;
   justify-content: space-between;
@@ -493,10 +498,10 @@ html, body {
   flex-shrink: 0;
 }
 
-/* 패널 제목 스타일 */
+/* 패널 제목 */
 .panel-title { font-size: 20px; display: flex; align-items: center; gap: 4px; color: #ffffff; }
 
-/* 권장범위 우측 텍스트 */
+/* 권장 범위 정보 텍스트 */
 .range-header-text { font-size: 9.5px; color: var(--text-secondary); }
 
 /* 표 컬럼 서식 헤더 */
@@ -525,7 +530,7 @@ html, body {
   overflow-y: auto;
 }
 
-/* 실시간 센서 타일 단일 박스 */
+/* 센서 개별 타일 박스 */
 .sensor-tile {
   display: grid;
   grid-template-columns: 100px 70px 50px 1fr;
@@ -541,16 +546,16 @@ html, body {
   transition: background 0.2s;
 }
 
-/* 타일 마우스 호버 배경 */
+/* 센서 타일 마우스 호버 */
 .sensor-tile:hover { background: var(--bg-card-hover); }
 
-/* 센서 상태 경고 타일 배경 */
+/* 경고 상태 센서 타일 배경 */
 .sensor-tile.status-warn {
   border-left-color: var(--status-warn);
   background-color: #240a0c;
 }
 
-/* 센서 세부 정보 컨테이너 */
+/* 센서 세부정보 래퍼 */
 .tile-info {
   display: flex;
   flex-direction: column;
@@ -558,7 +563,7 @@ html, body {
   gap: 1px;
 }
 
-/* 센서 설치 구역명 */
+/* 센서 위치 구역명 */
 .tile-zone {
   font-size: 10px;
   color: var(--text-secondary);
@@ -567,7 +572,7 @@ html, body {
   text-overflow: ellipsis;
 }
 
-/* 센서 표시 이름 */
+/* 센서 명칭 */
 .tile-name {
   font-size: 18px;
   color: #ffffff;
@@ -577,7 +582,7 @@ html, body {
   letter-spacing: -0.3px;
 }
 
-/* 온도 수치 래퍼 */
+/* 온도 수치 표시 그룹 */
 .tile-temp-group {
   display: flex;
   flex-direction: column;
@@ -604,7 +609,7 @@ html, body {
   color: #94a3b8;
 }
 
-/* 체감 온도 서식 */
+/* 체감 온도 표시 */
 .tile-feels {
   font-size: 9.5px;
   color: #f87171;
@@ -619,7 +624,7 @@ html, body {
   text-align: center;
 }
 
-/* 미니 그래프 프레임 */
+/* 미니 차트 컨테이너 */
 .minichart-wrapper {
   width: 100%;
   height: 100%;
@@ -634,12 +639,13 @@ html, body {
   align-items: center;
 }
 
+/* 미니 차트 Canvas */
 .minichart-wrapper canvas { width: 100% !important; height: 100% !important; }
 
-/* 엑셀 확인 모달 오버레이 */
+/* 모달 백드롭 오버레이 */
 .modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.8); z-index: 9999; align-items: center; justify-content: center; }
 
-/* 엑셀 모달 팝업 본체 */
+/* 모달 팝업 본체 */
 .modal-box { background: #101726; width: 90%; max-width: 340px; border-radius: 6px; padding: 14px; border: 1px solid var(--border); box-shadow: 0 10px 25px rgba(0, 0, 0, 0.8); }
 .modal-box h3 { margin-bottom: 4px; font-size: 14px; color: #ffffff; }
 .modal-desc { margin-bottom: 10px; font-size: 10.5px; color: var(--text-secondary); }
@@ -647,13 +653,13 @@ html, body {
 .modal-row { display: flex; justify-content: space-between; }
 .modal-confirm-text { margin-bottom: 10px; font-size: 11px; color: #cbd5e1; text-align: center; }
 
-/* 모달 하단 버튼 액션 그룹 */
+/* 모달 하단 버튼 영역 */
 .modal-btn-group { display: flex; gap: 5px; }
 .btn-modal-confirm { flex: 1; padding: 7px 0; border-radius: 4px; border: none; background: #10b981; color: #fff; font-size: 11px; cursor: pointer; }
 .btn-modal-cancel { flex: 1; padding: 7px 0; border-radius: 4px; border: 1px solid #334155; background: #1e293b; color: #94a3b8; font-size: 11px; cursor: pointer; }
 
-/* 모바일 반응형 스타일 */
-@media screen and (max-width: 1024px) {
+/* 반응형 모바일 및 태블릿 대응 (1200px 이하 해상도 대응) */
+@media screen and (max-width: 1200px) {
   html, body {
     height: auto !important;
     overflow-y: auto !important;
@@ -664,34 +670,40 @@ html, body {
     height: auto !important;
   }
 
+  /* 헤더 모바일 정렬 */
   .header {
     flex-direction: column;
-    gap: 8px;
     align-items: stretch;
+    gap: 8px;
   }
 
-  /* 모바일 헤더 타이틀 찌그러짐 방지 및 배치 해제 */
+  .header-left {
+    justify-content: center;
+  }
+
   .header-title-box {
-    position: static;
-    transform: none;
-    text-align: center;
+    width: 100%;
+    margin: 4px 0;
   }
 
   .header-title-box h1 {
-    font-size: 22px; /* 모바일에서 깨지지 않도록 적정 크기 조정 */
+    font-size: 20px;
+    white-space: normal;
+    word-break: keep-all;
   }
 
   .status-panel {
-    flex-wrap: wrap;
-    justify-content: space-between;
+    width: 100%;
+    justify-content: center;
   }
 
   .excel-control-box {
     width: 100%;
-    justify-content: space-between;
+    justify-content: center;
     flex-wrap: wrap;
   }
 
+  /* 3열 레이아웃 1열 변환 */
   .main-grid {
     grid-template-columns: 1fr !important;
     height: auto !important;
@@ -717,7 +729,7 @@ html, body {
   }
 
   .tile-name {
-    font-size: 12.5px;
+    font-size: 13px;
   }
 
   .tile-temp {
