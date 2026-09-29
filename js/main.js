@@ -24,7 +24,7 @@ const SENSOR_CONFIG = {
 
 // 시스템 설정
 const CONFIG = {
-  API_BASE_URL: 'https://taxation-back-assumed-utah.trycloudflare.com',
+  API_BASE_URL: 'https://mine-logs-safe-airlines.trycloudflare.com',
   ALARM_DURATION_SEC: 5,
   POLLING_INTERVAL_MS: 5000,
   EXCLUDED_ALERT_TYPES: ['GAS']
@@ -455,7 +455,7 @@ function updateOrCreateMiniChart(index, cfg, currentTemp, time, history) {
   let colorPrimary = '#38bdf8';
   if (cfg.type === 'FREEZING') colorPrimary = '#c084fc';
   if (cfg.type === 'PROD1') colorPrimary = '#fb923c';
-  if (cfg.type === 'PROD2') colorPrimary = '#f59e0b';
+  if (cfg.type === 'PROD2') colorPrimary = '#ffdda1';
 
   const ctx = canvasElem.getContext('2d');
   const gradient = ctx.createLinearGradient(0, 0, 0, 40);
