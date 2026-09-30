@@ -1,4 +1,4 @@
-// 센서 마스터 정보
+// 센서 마스터 정보 (유지보수를 위해 offset 속성 추가 적용 가능)
 const SENSOR_CONFIG = {
   '스마트온도계': { name: '공무팀', zone: '야외 현장', type: 'HEAT', min: -18.0, max: 38.0, sensorId: '6281-7088' },
   '13room':       { name: '야외외부', zone: '야외 현장', type: 'HEAT', min: -18.0, max: 38.0, sensorId: '8629-9794' },
@@ -11,15 +11,15 @@ const SENSOR_CONFIG = {
   '골드포장실':    { name: '골드포장실', zone: '현장 온열', type: 'PROD2', min: -18.0, max: 38.0, sensorId: '9318-2714' },
   '원료보관실':    { name: '원료보관실', zone: '현장 온열', type: 'PROD2', min: -18.0, max: 38.0, sensorId: '3848-8683', channel: 1 },
   '소분계량실':    { name: '소분계량실', zone: '현장 온열', type: 'PROD2', min: -18.0, max: 38.0, sensorId: '3848-8683', channel: 2 },
-  '10번창고':     { name: '10번 냉동', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -12.0, sensorId: '9751-1833', channel: 2},
-  '11번창고':     { name: '11번 냉동', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -12.0, sensorId: '9751-1833', channel: 1},
+  '10번창고':     { name: '10번 냉동', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -12.0, sensorId: '9751-1833', channel: 2, offset: -8.0 },
+  '11번창고':     { name: '11번 냉동', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -12.0, sensorId: '9751-1833', channel: 1 },
   '스마트센서':   { name: '12번 냉동', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -5.0, sensorId: '8433-5905', channel: 1 },
   '2채널':       { name: '13번 냉장', zone: '외부창고', type: 'COOLING', min: 0.0, max: 5.0, sensorId: '8433-5905', channel: 2 },
-  '14번창고':     { name: '14번 냉동', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -12.0, sensorId: '4595-1501', channel: 1},
-  '15번창고':     { name: '15번 냉장', zone: '외부창고', type: 'COOLING', min: -1.0, max: 5.0, sensorId: '4595-1501', channel: 2},
-  'B동 냉동':     { name: 'B동 냉동', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -12.0, sensorId: '8405-9325'},
-  'B동 냉장1':    { name: 'B동 냉장1', zone: '외부창고', type: 'COOLING', min: 0.0, max: 5.0, sensorId: '2830-9035', channel: 1},
-  'B동 냉장2':    { name: 'B동 냉장2', zone: '외부창고', type: 'COOLING', min: 0.0, max: 5.0, sensorId: '2830-9035', channel: 2}
+  //'14번창고':     { name: '14번 냉동', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -12.0, sensorId: '4595-1501', channel: 1 },
+  '15번창고':     { name: '15번 냉장', zone: '외부창고', type: 'COOLING', min: -1.0, max: 5.0, sensorId: '4595-1501', channel: 2 },
+  'B동 냉동':     { name: 'B동 냉동', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -12.0, sensorId: '8405-9325' },
+  'B동 냉장1':    { name: 'B동 냉장1', zone: '외부창고', type: 'COOLING', min: 0.0, max: 5.0, sensorId: '2830-9035', channel: 1 },
+  'B동 냉장2':    { name: 'B동 냉장2', zone: '외부창고', type: 'COOLING', min: 0.0, max: 5.0, sensorId: '2830-9035', channel: 2 }
 };
 
 // 시스템 설정
@@ -157,6 +157,10 @@ async function fetchSensorData() {
     const data = await response.json();
 
     if (data && data.result_code === 0) {
+      
+      // ✅ 서버에서 데이터 받은 직후 SENSOR_CONFIG의 offset 설정에 따라 자동 보정 수행
+      correction(data);
+
       renderDashboard(data);
       renderGasData(data);
     } else {
@@ -165,6 +169,80 @@ async function fetchSensorData() {
   } catch (e) {
     console.error("Sensor fetch error:", e);
     setSyncStatus('연결 끊김', '#ef4444');
+  }
+}
+
+// ✅ 범용 온도 보정 및 경고 재평가 함수
+function correction(data) {
+  if (!Array.isArray(data.name_list)) return;
+
+  // 서버 응답에 sensor_configs 구조가 없다면 초기화
+  if (!data.sensor_configs) data.sensor_configs = {};
+
+  // 1. 센서 리스트를 순회하며 보정치 연산 및 상태 재평가
+  data.name_list.forEach((rawName, index) => {
+    const config = SENSOR_CONFIG[rawName];
+    if (!data.sensor_configs[index]) data.sensor_configs[index] = {};
+
+    if (config && typeof config.offset === 'number') {
+      const offsetValue = config.offset;
+
+      // 1-1. 현재 실시간 온도 보정 및 타일 경고 상태(isWarning) 갱신
+      if (data.data_list_1 && data.data_list_1[index] !== undefined && data.data_list_1[index] !== null) {
+        let val = parseFloat(data.data_list_1[index]);
+        if (!isNaN(val) && val !== 0) {
+          let calibratedVal = val + offsetValue;
+          data.data_list_1[index] = calibratedVal.toFixed(1);
+
+          // 보정된 온도를 기준으로 타일 테두리(Warning) 다시 판별 (정상이면 에러 상태 해제)
+          if (config.min !== undefined && config.max !== undefined) {
+            if (calibratedVal < config.min || calibratedVal > config.max) {
+              data.sensor_configs[index].isWarning = true;
+            } else {
+              data.sensor_configs[index].isWarning = false;
+            }
+          }
+        }
+      }
+
+      // 1-2. 차트 렌더링용 과거 히스토리 데이터 일괄 보정 적용
+      if (Array.isArray(data.history)) {
+        data.history.forEach(h => {
+          if (h.temps && h.temps[index] !== undefined && h.temps[index] !== null) {
+            let hVal = parseFloat(h.temps[index]);
+            if (!isNaN(hVal) && hVal !== 0) {
+              h.temps[index] = (hVal + offsetValue).toFixed(1);
+            }
+          }
+        });
+      }
+    }
+  });
+
+  // 2. 경고 팝업용 리스트(alert_items) 재평가
+  if (Array.isArray(data.alert_items)) {
+    data.alert_items = data.alert_items.filter(item => {
+      // 해당 경고가 어떤 센서인지 찾기
+      const targetKey = item.rawName || Object.keys(SENSOR_CONFIG).find(key => SENSOR_CONFIG[key].name === item.displayName);
+      const targetConfig = targetKey ? SENSOR_CONFIG[targetKey] : null;
+
+      if (targetConfig && typeof targetConfig.offset === 'number') {
+        let alertVal = parseFloat(item.temp);
+        
+        if (!isNaN(alertVal)) {
+          let calibratedVal = alertVal + targetConfig.offset;
+          item.temp = calibratedVal.toFixed(1);
+
+          // 온도를 보정했더니 min~max 정상 범위 안에 들어온다면? -> 경고 목록에서 아예 삭제 (filter out)
+          if (targetConfig.min !== undefined && targetConfig.max !== undefined) {
+            if (calibratedVal >= targetConfig.min && calibratedVal <= targetConfig.max) {
+              return false;
+            }
+          }
+        }
+      }
+      return true; // 보정 대상이 아니거나, 보정 후에도 여전히 범위를 벗어났으면 경고 유지
+    });
   }
 }
 
