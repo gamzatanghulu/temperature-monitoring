@@ -507,17 +507,23 @@ cloudflared tunnel --url http://localhost:3000
 
 ### 통합 관제 대시보드
 
-<img width="1887" height="527" alt="image" src="https://github.com/user-attachments/assets/a5d05ceb-6fa8-4af1-8656-9750574137d2" />
+<img width="1908" height="896" alt="image" src="https://github.com/user-attachments/assets/978855ac-104a-42a8-b9fc-7c2bab6ede7e" />
+
 
 
 ### 온도 / 습도 차트
 
-<img width="1883" height="359" alt="image" src="https://github.com/user-attachments/assets/690810a0-80b4-4f86-9af8-4be3d36e984a" />
+<img width="623" height="456" alt="image" src="https://github.com/user-attachments/assets/c8cdd3a4-96fc-4f47-bcea-a5758a5c7ad5" />
 
 
 ### 가스 용기 모니터링
 
-<img width="476" height="88" alt="image" src="https://github.com/user-attachments/assets/0ac9d725-aefd-45b4-9142-2d3c6120b411" />
+<img width="646" height="354" alt="image" src="https://github.com/user-attachments/assets/2b170d42-1215-4af9-a270-be9db9e58f27" />
+
+
+### 냉동/냉장 창고 온도 모니터링
+
+<img width="632" height="808" alt="image" src="https://github.com/user-attachments/assets/68aef3b7-622c-4db5-9389-65a6ba1d338b" />
 
 
 ### Excel 리포트
