@@ -25,15 +25,15 @@ function getEmailHeaderConfig(emailType, isTest, items) {
   const firstType = items[0]?.type;
   switch (firstType) {
     case 'GAS':
-      return { title: '탄산/질소 고압용기 잔량/압력 이상 경보', bg: '#7c3aed', badge: 'GAS TANK ALERT' };
-    case 'OUTDOOR':
-      return { title: '폭염 / 온열질환 위험 경보 (체감온도 초과)', bg: '#ea580c', badge: 'HEAT WAVE ALERT' };
-    case 'FREEZING':
-      return { title: '냉동창고 긴급 온도 이상', bg: '#4f46e5', badge: 'FREEZER ALERT' };
-    case 'COOLING':
-      return { title: '냉장창고 긴급 온도 이상', bg: '#0284c7', badge: 'COOLING ALERT' };
+      return { title: '탄산/질소 용기 상태 이상 경보 (저압/고압/과부족)', bg: '#7c3aed', badge: 'GAS TANK ALERT' };
+    case 'HEAT':
+      return { title: '폭염 / 온열질환 위험 경보 (경고 단계 도달)', bg: '#ea580c', badge: 'HEAT WAVE ALERT' };
+    case 'PROD1':
+      return { title: '생산 1팀 온·습도 적정 범위 이탈 경보', bg: '#dc2626', badge: 'PROD 1 ALERT' };
+    case 'PROD2':
+      return { title: '생산 2팀 온·습도 적정 범위 이탈 경보', bg: '#dc2626', badge: 'PROD 2 ALERT' };
     default:
-      return { title: '긴급 온도/가스 경고', bg: '#dc2626', badge: 'CRITICAL ALERT' };
+      return { title: '긴급 관제 경고 리포트', bg: '#dc2626', badge: 'CRITICAL ALERT' };
   }
 }
 
@@ -42,10 +42,10 @@ function renderTempDisplay(item, isRecovery) {
   const color = isRecovery ? '#059669' : '#dc2626';
 
   if (item.type === 'GAS') {
-    return `<div style="font-size: 15px; font-weight: 800; color: ${color}; font-family: 'Consolas', monospace;">${item.temp} MPa</div>`;
+    return `<div style="font-size: 15px; font-weight: 800; color: ${color}; font-family: 'Consolas', monospace;">${item.temp} kg / ${item.hum} bar</div>`;
   }
 
-  if (item.type === 'OUTDOOR') {
+  if (item.type === 'HEAT') {
     return `
       <div style="font-size: 15px; font-weight: 800; color: ${color}; font-family: 'Consolas', monospace;">
         ${item.temp}℃ <span style="font-size: 12px; color: #64748b; font-weight: 400;">(${item.hum}%)</span>
@@ -91,7 +91,7 @@ async function sendEmailNotification({ items = [], emailType = 'ALERT', isTest =
           <span style="font-size: 11px; font-weight: 600; color: #475569; background: #f1f5f9; padding: 4px 8px; border-radius: 6px; display: inline-block;">${item.type}</span>
         </td>
         <td style="padding: 16px 20px; border-bottom: 1px solid #f1f5f9; text-align: center; vertical-align: middle; font-size: 13px; color: #334155; font-weight: 600;">
-          ${item.type === 'OUTDOOR' ? '체감 ' : ''}${item.min} ~ ${item.max}
+          ${item.type === 'HEAT' ? '경고기준 33.0℃ 이상' : item.type === 'GAS' ? '압력/잔량 모니터링' : `${item.min} ~${item.max}℃`}
         </td>
         <td style="padding: 16px 20px; border-bottom: 1px solid #f1f5f9; text-align: right; vertical-align: middle;">
           ${renderTempDisplay(item, emailType === 'RECOVERY')}
@@ -101,8 +101,8 @@ async function sendEmailNotification({ items = [], emailType = 'ALERT', isTest =
   const bodyDescription = isTest
     ? '본 메일은 통합 관제 시스템의 이메일 발송 기능 테스트 메일입니다.'
     : emailType === 'RECOVERY'
-      ? '점검 및 수리가 완료되어 센서가 안전한 정상 범위로 회복되었습니다.'
-      : '설정된 적정 범위를 이탈한 센서가 감지되었습니다. 수리 동안 추가 중복 메일은 방지됩니다.';
+      ? '점검 및 조치가 완료되어 센서가 정상 범위로 회복되었습니다.'
+      : '설정된 적정 범위를 이탈하거나 경고 조건이 발생한 항목이 감지되었습니다.';
 
   const htmlContent = `<!DOCTYPE html>
 <html lang="ko">

@@ -1,7 +1,7 @@
 module.exports = {
   HASH_KEY: process.env.HASH_KEY || '75597298595310529218112835277866',
-  // RECEIVER_TO: process.env.RECEIVER_TO || "yhlohna@choheung.co.kr",
-  // RECEIVER_CC: process.env.RECEIVER_CC || "joker@choheung.co.kr; ohdonga@choheung.co.kr; moonflair@choheung.co.kr; hojin3131@choheung.co.kr; sh_yoon001@choheung.co.kr; su25@choheung.co.kr; yoonsook.ko@choheung.co.kr; iopen009@choheung.co.kr",
+  RECEIVER_TO: process.env.RECEIVER_TO || "yhlohna@choheung.co.kr",
+  RECEIVER_CC: process.env.RECEIVER_CC || "joker@choheung.co.kr; ohdonga@choheung.co.kr; moonflair@choheung.co.kr; hojin3131@choheung.co.kr; sh_yoon001@choheung.co.kr; su25@choheung.co.kr; yoonsook.ko@choheung.co.kr; iopen009@choheung.co.kr",
   FETCH_INTERVAL_MS: 5 * 60 * 1000, // 5분
 
 
@@ -23,7 +23,7 @@ module.exports = {
     '골드포장실':    { name: '골드포장실', zone: '현장 온열', type: 'PROD2', min: -18.0, max: 38.0, sensorId: '9318-2714' },
     '원료보관실':    { name: '원료보관실', zone: '현장 온열', type: 'PROD2', min: -18.0, max: 38.0, sensorId: '3848-8683', channel: 1 },
     '소분계량실':    { name: '소분계량실', zone: '현장 온열', type: 'PROD2', min: -18.0, max: 38.0, sensorId: '3848-8683', channel: 2 },
-    '10번창고':     { name: '10번 냉동', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -12.0, sensorId: '9751-1833', channel: 2, offset: -7.0 },
+    '10번창고':     { name: '10번 냉동', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -12.0, sensorId: '9751-1833', channel: 2, offset: -4.0 },
     '11번창고':     { name: '11번 냉동', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -12.0, sensorId: '9751-1833', channel: 1 },
     '스마트센서':   { name: '12번 냉동', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -5.0, sensorId: '8433-5905', channel: 1 },
     '2채널':       { name: '13번 냉장', zone: '외부창고', type: 'COOLING', min: 0.0, max: 5.0, sensorId: '8433-5905', channel: 2 },

@@ -11,23 +11,24 @@ const SENSOR_CONFIG = {
   '골드포장실':    { name: '골드포장실', zone: '현장 온열', type: 'PROD2', min: -18.0, max: 38.0, sensorId: '9318-2714' },
   '원료보관실':    { name: '원료보관실', zone: '현장 온열', type: 'PROD2', min: -18.0, max: 38.0, sensorId: '3848-8683', channel: 1 },
   '소분계량실':    { name: '소분계량실', zone: '현장 온열', type: 'PROD2', min: -18.0, max: 38.0, sensorId: '3848-8683', channel: 2 },
-  '10번창고':     { name: '10번 냉동', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -12.0, sensorId: '9751-1833', channel: 2, offset: -7.0 },
+  '10번창고':     { name: '10번 냉동', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -12.0, sensorId: '9751-1833', channel: 2, offset: -4.0 },
   '11번창고':     { name: '11번 냉동', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -12.0, sensorId: '9751-1833', channel: 1 },
-  '스마트센서':   { name: '12번 냉동', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -5.0, sensorId: '8433-5905', channel: 1 },
+  '스마트센서':   { name: '12번 냉동', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -12.0, sensorId: '8433-5905', channel: 1 },
   '2채널':       { name: '13번 냉장', zone: '외부창고', type: 'COOLING', min: 0.0, max: 5.0, sensorId: '8433-5905', channel: 2 },
-  //'14번창고':     { name: '14번 냉동', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -12.0, sensorId: '4595-1501', channel: 1 },
-  '15번창고':     { name: '15번 냉장', zone: '외부창고', type: 'COOLING', min: -1.0, max: 5.0, sensorId: '4595-1501', channel: 2 },
+  '15번창고':     { name: '15번 냉장', zone: '외부창고', type: 'COOLING', min: 0.0, max: 5.0, sensorId: '4595-1501', channel: 2 },
   'B동 냉동':     { name: 'B동 냉동', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -12.0, sensorId: '8405-9325' },
   'B동 냉장1':    { name: 'B동 냉장1', zone: '외부창고', type: 'COOLING', min: 0.0, max: 5.0, sensorId: '2830-9035', channel: 1 },
-  'B동 냉장2':    { name: 'B동 냉장2', zone: '외부창고', type: 'COOLING', min: 0.0, max: 5.0, sensorId: '2830-9035', channel: 2 }
+  'B동 냉장2':    { name: 'B동 냉장2', zone: '외부창고', type: 'COOLING', min: 0.0, max: 5.0, sensorId: '2830-9035', channel: 2 },
+  'joa_co2':      { name: '탄산 고압용기', zone: '가스 저장소', type: 'GAS' },
+  'joa_n2':       { name: '질소 고압용기', zone: '가스 저장소', type: 'GAS' }
 };
 
-// 시스템 설정
+// 시스템 설정 (✅ 냉장, 냉동 및 가스를 화면 경고 팝업 제외 대상으로 지정)
 const CONFIG = {
-  API_BASE_URL: 'https://pdt-earthquake-miracle-cadillac.trycloudflare.com',
+  API_BASE_URL: 'https://planner-smallest-avon-handled.trycloudflare.com',
   ALARM_DURATION_SEC: 5,
   POLLING_INTERVAL_MS: 5000,
-  EXCLUDED_ALERT_TYPES: ['GAS']
+  EXCLUDED_ALERT_TYPES: ['GAS', 'COOLING', 'FREEZING']
 };
 
 // 앱 상태 관리
@@ -157,8 +158,7 @@ async function fetchSensorData() {
     const data = await response.json();
 
     if (data && data.result_code === 0) {
-      
-      // ✅ 서버에서 데이터 받은 직후 SENSOR_CONFIG의 offset 설정에 따라 자동 보정 수행
+      // 서버에서 데이터 받은 직후 SENSOR_CONFIG의 offset 설정에 따라 자동 보정 수행
       correction(data);
 
       renderDashboard(data);
@@ -172,14 +172,12 @@ async function fetchSensorData() {
   }
 }
 
-// ✅ 범용 온도 보정 및 경고 재평가 함수
+// 범용 온도 보정 및 경고 재평가 함수 (수정 적용)
 function correction(data) {
   if (!Array.isArray(data.name_list)) return;
 
-  // 서버 응답에 sensor_configs 구조가 없다면 초기화
   if (!data.sensor_configs) data.sensor_configs = {};
 
-  // 1. 센서 리스트를 순회하며 보정치 연산 및 상태 재평가
   data.name_list.forEach((rawName, index) => {
     const config = SENSOR_CONFIG[rawName];
     if (!data.sensor_configs[index]) data.sensor_configs[index] = {};
@@ -187,25 +185,22 @@ function correction(data) {
     if (config && typeof config.offset === 'number') {
       const offsetValue = config.offset;
 
-      // 1-1. 현재 실시간 온도 보정 및 타일 경고 상태(isWarning) 갱신
       if (data.data_list_1 && data.data_list_1[index] !== undefined && data.data_list_1[index] !== null) {
         let val = parseFloat(data.data_list_1[index]);
         if (!isNaN(val) && val !== 0) {
           let calibratedVal = val + offsetValue;
           data.data_list_1[index] = calibratedVal.toFixed(1);
 
-          // 보정된 온도를 기준으로 타일 테두리(Warning) 다시 판별 (정상이면 에러 상태 해제)
-          if (config.min !== undefined && config.max !== undefined) {
-            if (calibratedVal < config.min || calibratedVal > config.max) {
-              data.sensor_configs[index].isWarning = true;
-            } else {
-              data.sensor_configs[index].isWarning = false;
-            }
+          // 보정된 온도를 기준으로 타일 경고 상태 판별
+          if (config.type === 'HEAT') {
+            const feels = data.feels_like_list?.[index] ? parseFloat(data.feels_like_list[index]) : calibratedVal;
+            data.sensor_configs[index].isWarning = feels >= 33.0; // 체감 33도 이상 시 경고
+          } else if (config.min !== undefined && config.max !== undefined) {
+            data.sensor_configs[index].isWarning = (calibratedVal < config.min || calibratedVal > config.max);
           }
         }
       }
 
-      // 1-2. 차트 렌더링용 과거 히스토리 데이터 일괄 보정 적용
       if (Array.isArray(data.history)) {
         data.history.forEach(h => {
           if (h.temps && h.temps[index] !== undefined && h.temps[index] !== null) {
@@ -219,10 +214,9 @@ function correction(data) {
     }
   });
 
-  // 2. 경고 팝업용 리스트(alert_items) 재평가
+  // 경고 팝업용 리스트(alert_items) 재평가
   if (Array.isArray(data.alert_items)) {
     data.alert_items = data.alert_items.filter(item => {
-      // 해당 경고가 어떤 센서인지 찾기
       const targetKey = item.rawName || Object.keys(SENSOR_CONFIG).find(key => SENSOR_CONFIG[key].name === item.displayName);
       const targetConfig = targetKey ? SENSOR_CONFIG[targetKey] : null;
 
@@ -233,15 +227,17 @@ function correction(data) {
           let calibratedVal = alertVal + targetConfig.offset;
           item.temp = calibratedVal.toFixed(1);
 
-          // 온도를 보정했더니 min~max 정상 범위 안에 들어온다면? -> 경고 목록에서 아예 삭제 (filter out)
-          if (targetConfig.min !== undefined && targetConfig.max !== undefined) {
+          if (targetConfig.type === 'HEAT') {
+            const feelsVal = parseFloat(item.feelsLike ?? calibratedVal);
+            if (feelsVal < 33.0) return false;
+          } else if (targetConfig.min !== undefined && targetConfig.max !== undefined) {
             if (calibratedVal >= targetConfig.min && calibratedVal <= targetConfig.max) {
               return false;
             }
           }
         }
       }
-      return true; // 보정 대상이 아니거나, 보정 후에도 여전히 범위를 벗어났으면 경고 유지
+      return true;
     });
   }
 }
@@ -283,7 +279,6 @@ function renderDashboard(data) {
       if (isNaN(temp) || temp === 0) temp = null;
       if (isNaN(hum) || hum === 0) hum = null;
 
-      // 1. 서버 응답 데이터에서 체감온도 배열 우선 추출
       let feelsLike = null;
       if (data.feels_like_list && data.feels_like_list[index] !== undefined && data.feels_like_list[index] !== null) {
         feelsLike = parseFloat(data.feels_like_list[index]);
@@ -291,12 +286,11 @@ function renderDashboard(data) {
         feelsLike = parseFloat(data.feels_list[index]);
       }
 
-      // 2. 서버 체감온도가 없거나 유효하지 않고, 온도/습도가 정상일 때 calc.js 계산 함수 호출
       if ((feelsLike === null || isNaN(feelsLike)) && temp !== null && hum !== null) {
         if (typeof calculateFeelsLikeTemp === 'function') {
           feelsLike = calculateFeelsLikeTemp(temp, hum);
         } else {
-          feelsLike = temp; // fallback
+          feelsLike = temp;
         }
       }
 
@@ -306,7 +300,6 @@ function renderDashboard(data) {
 
       renderSensorTile(index, cfg, temp, hum, feelsLike, cfg.isWarning);
       
-      // HEAT 타입이 아닌 경우에만 그래프 업데이트 수행
       if (cfg.type !== 'HEAT') {
         updateOrCreateMiniChart(index, cfg, temp, data.updated_at, data.history || []);
       }
@@ -318,6 +311,7 @@ function renderDashboard(data) {
     if (headElem) headElem.innerText = text;
   });
 
+  // ✅ CONFIG.EXCLUDED_ALERT_TYPES(GAS, COOLING, FREEZING)에 포함된 항목 필터링
   const validAlertItems = (data.alert_items || []).filter(item => !CONFIG.EXCLUDED_ALERT_TYPES.includes(item.type));
   showAlertBanner(validAlertItems);
 }
@@ -332,24 +326,22 @@ function renderGasData(data) {
   if (n2) updateSingleGasUI('ln2', n2);
 }
 
-// 가스 탱크 위젯 개별 업데이트 (잔량 & 압력 불들어오는 태그 구조 적용)
+// 가스 탱크 위젯 개별 업데이트
 function updateSingleGasUI(type, info) {
   const fillElem = document.getElementById(`gas-fill-${type}`);
   const pctElem = document.getElementById(`gas-pct-${type}`);
   const weightElem = document.getElementById(`gas-weight-${type}`);
-  const weightStatusElem = document.getElementById(`gas-weight-status-${type}`); // 잔량 과부족/적정량 태그 영역
-  const pressValElem = document.getElementById(`gas-press-val-${type}`);        // 압력 수치 영역 (or gas-press-type)
-  const pressStatusElem = document.getElementById(`gas-press-status-${type}`);   // 압력 저압/정상/고압 태그 영역
+  const weightStatusElem = document.getElementById(`gas-weight-status-${type}`);
+  const pressValElem = document.getElementById(`gas-press-val-${type}`);
+  const pressStatusElem = document.getElementById(`gas-press-status-${type}`);
   const statusElem = document.getElementById(`gas-status-${type}`);
 
-  // 백엔드 fallback 연산
   const percent = info.percent ?? 0;
   const weight = Number(info.weight ?? 0);
   const maxWeight = Number(info.max_weight ?? 5000);
   const pressure = parseFloat(info.pressure ?? 0);
   const status = info.status ?? 'NORMAL';
 
-  // 1. 게이지 및 텍스트 바인딩
   if (fillElem) fillElem.style.height = `${Math.min(Math.max(percent, 0), 100)}%`;
   if (pctElem) pctElem.innerText = `${percent}%`;
 
@@ -359,24 +351,20 @@ function updateSingleGasUI(type, info) {
     weightElem.innerText = `${formattedWeight} kg / ${formattedMax} kg`;
   }
 
-  // 2. 잔량 상태 판정 (1,000kg 미만: 과부족 / 1,000kg 이상: 적정량)
   if (weightStatusElem) {
-    const isShortage = weight < 1000;
+    const isShortage = weight < 800;
     weightStatusElem.innerHTML = `
       <span class="gas-tag ${isShortage ? 'active-warn' : 'off'}">과부족</span>
       <span class="gas-tag ${!isShortage ? 'active-ok' : 'off'}">적정량</span>
     `;
   }
 
-  // 3. 압력 수치 표기 (기존 pressElem ID 지원 포함)
   const targetPressValElem = pressValElem || document.getElementById(`gas-press-${type}`);
   if (targetPressValElem) {
-    // 수치 텍스트만 깔끔하게 노출
     targetPressValElem.innerText = `${pressure} bar`;
   }
 
-  // 4. 압력 3단계 상태 판정 (저압 / 정상 / 고압)
-  let pressLevel = 'normal'; // 'low' | 'normal' | 'high'
+  let pressLevel = 'normal';
   const normalRangeText = (type === 'lco2') ? '10~20bar' : '8~20bar';
 
   if (type === 'lco2') {
@@ -397,7 +385,6 @@ function updateSingleGasUI(type, info) {
     `;
   }
 
-  // 5. 상단 전체 가동 상태
   if (statusElem) {
     if (status === 'NORMAL') {
       statusElem.innerText = '정상 가동';
@@ -409,7 +396,7 @@ function updateSingleGasUI(type, info) {
   }
 }
 
-// 센서 타일 동적 생성 및 갱신 (폭염 레벨 바 반영)
+// 센서 타일 동적 생성 및 갱신
 function renderSensorTile(index, cfg, temp, hum, feelsLike, isWarning) {
   const tempText = (temp === null) ? '--' : temp.toFixed(1);
   const humText = (hum === null) ? '--' : `${hum.toFixed(1)}%`;
@@ -425,7 +412,6 @@ function renderSensorTile(index, cfg, temp, hum, feelsLike, isWarning) {
     tile.className = `sensor-tile ${isWarning ? 'status-warn' : 'status-ok'}`;
 
     if (cfg.type === 'HEAT') {
-      // 폭염 관제용 레벨 바 HTML 생성
       const heatLevel = getHeatLevel(feelsVal);
       tile.innerHTML = `
         <div class="tile-info">
@@ -464,7 +450,6 @@ function renderSensorTile(index, cfg, temp, hum, feelsLike, isWarning) {
         </div>
       `;
     } else {
-      // 일반 창고/생산라인 미니 차트용 HTML 생성
       tile.innerHTML = `
         <div class="tile-info">
           <span class="tile-zone">${cfg.zone}</span>
@@ -486,7 +471,6 @@ function renderSensorTile(index, cfg, temp, hum, feelsLike, isWarning) {
     const targetContainer = document.getElementById(`container-${cfg.type}`) || document.getElementById('container-COOLING');
     if (targetContainer) targetContainer.appendChild(tile);
   } else {
-    // 기존 타일 DOM 값 실시간 업데이트
     tile.className = `sensor-tile ${isWarning ? 'status-warn' : 'status-ok'}`;
     const tempElem = document.getElementById(`temp-val-${index}`);
     const humElem = document.getElementById(`hum-val-${index}`);
@@ -496,7 +480,6 @@ function renderSensorTile(index, cfg, temp, hum, feelsLike, isWarning) {
     if (humElem) humElem.innerText = humText;
     if (feelsElem && cfg.type === 'HEAT') feelsElem.innerText = feelsText;
 
-    // 폭염 타입인 경우 레벨 바 활성화 상태 업데이트
     if (cfg.type === 'HEAT') {
       const levelBarContainer = document.getElementById(`heat-level-bar-${index}`);
       if (levelBarContainer) {
@@ -514,7 +497,7 @@ function renderSensorTile(index, cfg, temp, hum, feelsLike, isWarning) {
   }
 }
 
-// Chart.js 미니 그래프 생성 및 업데이트 (HEAT 타입은 수행 안 함)
+// Chart.js 미니 그래프 생성 및 업데이트
 function updateOrCreateMiniChart(index, cfg, currentTemp, time, history) {
   if (cfg.type === 'HEAT') return;
 

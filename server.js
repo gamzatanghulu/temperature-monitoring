@@ -7,7 +7,7 @@ const { HASH_KEY, FETCH_INTERVAL_MS, SENSOR_CONFIG } = require('./config/sensorC
 const { initDbPool, createTableIfNotExists, saveSensorDataToOracle, loadInitialHistoryFromOracle } = require('./config/db');
 const { calculateFeelsLikeTemp } = require('./config/calc');
 const { fetchJoatechGasData } = require('./config/joatechService');
-const { sendEmailNotification } = require('./config/mailService');
+const { sendEmailNotification } = { sendEmailNotification: require('./config/mailService').sendEmailNotification };
 const createApiRouter = require('./config/api');
 
 const app = express();
@@ -139,27 +139,68 @@ async function fetchAndProcessData() {
         
         let feelsLike = temp;
         
-        // [수정 핵심!] OUTDOOR -> HEAT로 변경하여 온열 현장/야외 체감온도 정상 계산
+        // 체감온도 및 특수 데이터 처리
         if (cfg.type === 'HEAT' && temp !== null && hum !== null) {
           feelsLike = calculateFeelsLikeTemp(temp, hum);
         } else if (cfg.type === 'GAS') {
           feelsLike = (sensorApiData && sensorApiData.feelsLike !== undefined) ? sensorApiData.feelsLike : 0;
         }
 
-        // [수정 핵심!] 경보 임계값 체크 시 HEAT 타입은 체감온도 기준으로 체크
-        const targetTempForAlert = (cfg.type === 'HEAT') ? feelsLike : temp;
-        
-        // 임계값 및 임계범위 상태 체크
-        const hasThresholds = (cfg.min !== undefined && cfg.max !== undefined);
-        const isCurrentlyWarning = hasThresholds && (temp !== null && !isNaN(temp)) && (targetTempForAlert < cfg.min || targetTempForAlert > cfg.max);
+        // ----------------------------------------------------
+        // [경보 조건 판단 로직]
+        // ----------------------------------------------------
+        let isCurrentlyWarning = false;
+
+        // 1. 냉장, 냉동 창고는 메일 알림 조건 제외 (추후 기준 재정의 예정)
+        if (cfg.type === 'FREEZING' || cfg.type === 'COOLING') {
+          isCurrentlyWarning = false;
+        } 
+        // 2. 폭염/온열 (HEAT): 체감온도 기준 '경고' 단계(33℃ 이상) 감지 시 알림
+        else if (cfg.type === 'HEAT') {
+          const targetFeelsLike = feelsLike ?? temp;
+          if (targetFeelsLike !== null) {
+            isCurrentlyWarning = targetFeelsLike >= 33.0; // 폭염 '경고' 기준
+          }
+        } 
+        // 3. 탄산 / 질소 (GAS): 저압, 고압 또는 과부족 상태 시 알림
+        else if (cfg.type === 'GAS') {
+          const rawGas = sensorApiData?.rawGasData;
+          if (rawGas) {
+            const isPressureAlert = rawGas.pressureState === '저압' || rawGas.pressureState === '고압';
+            const isShortageAlert = rawGas.status === '과부족';
+            isCurrentlyWarning = isPressureAlert || isShortageAlert;
+          }
+        } 
+        // 4. 생산 1팀(PROD1), 생산 2팀(PROD2) 및 기타: 설정 범위(min ~ max) 이탈 시 알림
+        else if (cfg.type === 'PROD1' || cfg.type === 'PROD2') {
+          if (cfg.min !== undefined && cfg.max !== undefined && temp !== null) {
+            isCurrentlyWarning = (temp < cfg.min || temp > cfg.max);
+          }
+        }
+        else {
+          if (cfg.min !== undefined && cfg.max !== undefined && temp !== null) {
+            isCurrentlyWarning = (temp < cfg.min || temp > cfg.max);
+          }
+        }
+
         const previousState = sensorStateMap[rawName] || 'NORMAL';
+        const itemObj = { 
+          rawName, 
+          displayName: cfg.name, 
+          zone: cfg.zone, 
+          type: cfg.type, 
+          temp, 
+          feelsLike, 
+          hum, 
+          min: cfg.min, 
+          max: cfg.max 
+        };
 
-        const itemObj = { rawName, displayName: cfg.name, zone: cfg.zone, type: cfg.type, temp, feelsLike, hum, min: cfg.min, max: cfg.max };
-
+        // 경보 상태 변화 감지
         if (isCurrentlyWarning && previousState === 'NORMAL') {
           sensorStateMap[rawName] = 'WARNING';
           newlyAlertedItems.push(itemObj);
-          console.warn(`경보 발생: [${cfg.name}] 현재값(체감/기온) ${targetTempForAlert}`);
+          console.warn(`경보 발생: [${cfg.name}] 이상 상태 감지`);
         } else if (!isCurrentlyWarning && previousState === 'WARNING') {
           sensorStateMap[rawName] = 'NORMAL';
           newlyRecoveredItems.push(itemObj);
@@ -174,7 +215,7 @@ async function fetchAndProcessData() {
         feelsLikeTemps.push(feelsLike);
         sensorConfigs.push({ ...cfg, rawName, isWarning: isCurrentlyWarning });
 
-        // 오라클 DB 보낼 배열
+        // DB 저장용 배열 구성
         if (temp !== null) {
           itemsToSaveDb.push({ 
             rawName, 
