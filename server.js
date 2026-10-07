@@ -7,7 +7,7 @@ const { HASH_KEY, FETCH_INTERVAL_MS, SENSOR_CONFIG } = require('./config/sensorC
 const { initDbPool, createTableIfNotExists, saveSensorDataToOracle, loadInitialHistoryFromOracle } = require('./config/db');
 const { calculateFeelsLikeTemp } = require('./config/calc');
 const { fetchJoatechGasData } = require('./config/joatechService');
-const { sendEmailNotification } = { sendEmailNotification: require('./config/mailService').sendEmailNotification };
+const { sendEmailNotification } = require('./config/mailService');
 const createApiRouter = require('./config/api');
 
 const app = express();
@@ -151,7 +151,7 @@ async function fetchAndProcessData() {
         // ----------------------------------------------------
         let isCurrentlyWarning = false;
 
-        // 1. 냉장, 냉동 창고는 메일 알림 조건 제외 (추후 기준 재정의 예정)
+        // 1. 냉장, 냉동 창고는 메일 알림 조건 제외
         if (cfg.type === 'FREEZING' || cfg.type === 'COOLING') {
           isCurrentlyWarning = false;
         } 
@@ -162,13 +162,22 @@ async function fetchAndProcessData() {
             isCurrentlyWarning = targetFeelsLike >= 33.0; // 폭염 '경고' 기준
           }
         } 
-        // 3. 탄산 / 질소 (GAS): 저압, 고압 또는 과부족 상태 시 알림
+        // 3. 탄산 / 질소 (GAS): 저압, 고압 또는 과부족 상태 시 알림 (직접 압력/잔량 정밀 체크)
         else if (cfg.type === 'GAS') {
           const rawGas = sensorApiData?.rawGasData;
           if (rawGas) {
-            const isPressureAlert = rawGas.pressureState === '저압' || rawGas.pressureState === '고압';
-            const isShortageAlert = rawGas.status === '과부족';
-            isCurrentlyWarning = isPressureAlert || isShortageAlert;
+            const press = parseFloat(rawGas.pressure || 0);
+            const weight = parseFloat(rawGas.weight || 0);
+
+            // 탄산(lco2)은 10bar 미만, 질소(ln2)는 8bar 미만 시 저압 판단
+            const isCo2Low = (rawName === 'joa_co2' && press < 10.0);
+            const isN2Low  = (rawName === 'joa_n2'  && press < 8.0);
+            const isHighPress = press > 20.0;
+            const isShortage  = (weight < 800) || rawGas.status === '과부족';
+
+            const isPressureAlert = isCo2Low || isN2Low || isHighPress || rawGas.pressureState === '저압' || rawGas.pressureState === '고압';
+            
+            isCurrentlyWarning = isPressureAlert || isShortage;
           }
         } 
         // 4. 생산 1팀(PROD1), 생산 2팀(PROD2) 및 기타: 설정 범위(min ~ max) 이탈 시 알림

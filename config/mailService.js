@@ -162,11 +162,15 @@ async function sendEmailNotification({ items = [], emailType = 'ALERT', isTest =
 </body>
 </html>`;
 
+  // 세미콜론(;) 구분자를 쉼표(,)로 자동 변환하여 Nodemailer 문법 오류 방지
+  const safeTo = (RECEIVER_TO || '').replace(/;/g, ',').trim();
+  const safeCc = (RECEIVER_CC || '').replace(/;/g, ',').trim();
+
   try {
     const info = await transporter.sendMail({
       from: process.env.SMTP_USER || '"스마트관제" <no-reply@choheung.co.kr>',
-      to: RECEIVER_TO,
-      cc: RECEIVER_CC,
+      to: safeTo,
+      cc: safeCc,
       subject,
       html: htmlContent,
       attachments: [{
