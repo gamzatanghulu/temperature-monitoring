@@ -23,9 +23,9 @@ const SENSOR_CONFIG = {
     'joa_n2':       { name: '질소 고압용기', zone: '가스 저장소', type: 'GAS' }
 };
 
-// 시스템 설정 (✅ 냉장, 냉동 및 가스를 화면 경고 팝업 제외 대상으로 지정)
+// 시스템 설정
 const CONFIG = {
-  API_BASE_URL: 'https://prepare-glossary-feels-cells.trycloudflare.com',
+  API_BASE_URL: 'https://trance-basic-downloadable-graduate.trycloudflare.com',
   ALARM_DURATION_SEC: 5,
   POLLING_INTERVAL_MS: 5000,
   EXCLUDED_ALERT_TYPES: ['GAS', 'COOLING', 'FREEZING']
@@ -158,7 +158,7 @@ async function fetchSensorData() {
     const data = await response.json();
 
     if (data && data.result_code === 0) {
-      // 서버에서 데이터 받은 직후 SENSOR_CONFIG의 offset 설정에 따라 자동 보정 수행
+      // 서버에서 전달받은 데이터에 SENSOR_CONFIG offset 수치 적용
       correction(data);
 
       renderDashboard(data);
@@ -172,10 +172,9 @@ async function fetchSensorData() {
   }
 }
 
-// 범용 온도 보정 및 경고 재평가 함수 (수정 적용)
+// 센서 온도 보정(offset) 처리 함수
 function correction(data) {
   if (!Array.isArray(data.name_list)) return;
-
   if (!data.sensor_configs) data.sensor_configs = {};
 
   data.name_list.forEach((rawName, index) => {
@@ -191,10 +190,18 @@ function correction(data) {
           let calibratedVal = val + offsetValue;
           data.data_list_1[index] = calibratedVal.toFixed(1);
 
-          // 보정된 온도를 기준으로 타일 경고 상태 판별
+          // 체감온도(feels_like_list)에도 보정값 offset을 동일하게 적용
+          if (data.feels_like_list && data.feels_like_list[index] !== undefined && data.feels_like_list[index] !== null) {
+            let feelsVal = parseFloat(data.feels_like_list[index]);
+            if (!isNaN(feelsVal)) {
+              data.feels_like_list[index] = (feelsVal + offsetValue).toFixed(1);
+            }
+          }
+
+          // 보정 온도를 기준으로 경고 판별
           if (config.type === 'HEAT') {
             const feels = data.feels_like_list?.[index] ? parseFloat(data.feels_like_list[index]) : calibratedVal;
-            data.sensor_configs[index].isWarning = feels >= 33.0; // 체감 33도 이상 시 경고
+            data.sensor_configs[index].isWarning = feels >= 33.0;
           } else if (config.min !== undefined && config.max !== undefined) {
             data.sensor_configs[index].isWarning = (calibratedVal < config.min || calibratedVal > config.max);
           }
@@ -222,13 +229,13 @@ function correction(data) {
 
       if (targetConfig && typeof targetConfig.offset === 'number') {
         let alertVal = parseFloat(item.temp);
-        
         if (!isNaN(alertVal)) {
           let calibratedVal = alertVal + targetConfig.offset;
           item.temp = calibratedVal.toFixed(1);
 
           if (targetConfig.type === 'HEAT') {
-            const feelsVal = parseFloat(item.feelsLike ?? calibratedVal);
+            const feelsVal = parseFloat(item.feelsLike ?? calibratedVal) + targetConfig.offset;
+            item.feelsLike = feelsVal.toFixed(1);
             if (feelsVal < 33.0) return false;
           } else if (targetConfig.min !== undefined && targetConfig.max !== undefined) {
             if (calibratedVal >= targetConfig.min && calibratedVal <= targetConfig.max) {
@@ -252,7 +259,7 @@ function getHeatLevel(tempVal) {
   return 1;
 }
 
-// 대시보드 타일 및 차트 바인딩
+// 대시보드 타일 및 차트 바인딩 (서버에서 받은 calc.js의 체감온도를 그대로 사용)
 function renderDashboard(data) {
   setSyncStatus(data.updated_at || '--:--:--', '#38bdf8');
 
@@ -279,19 +286,14 @@ function renderDashboard(data) {
       if (isNaN(temp) || temp === 0) temp = null;
       if (isNaN(hum) || hum === 0) hum = null;
 
+      // 백엔드(calc.js)에서 이미 기상청 표준 수식으로 올바르게 계산해서 내려준 체감온도를 가져옴
       let feelsLike = null;
       if (data.feels_like_list && data.feels_like_list[index] !== undefined && data.feels_like_list[index] !== null) {
         feelsLike = parseFloat(data.feels_like_list[index]);
       } else if (data.feels_list && data.feels_list[index] !== undefined && data.feels_list[index] !== null) {
         feelsLike = parseFloat(data.feels_list[index]);
-      }
-
-      if ((feelsLike === null || isNaN(feelsLike)) && temp !== null && hum !== null) {
-        if (typeof calculateFeelsLikeTemp === 'function') {
-          feelsLike = calculateFeelsLikeTemp(temp, hum);
-        } else {
-          feelsLike = temp;
-        }
+      } else {
+        feelsLike = temp; // 백엔드 값이 없을 경우 기본값 세팅
       }
 
       if (!categoryRanges[cfg.type] && cfg.min !== undefined && cfg.max !== undefined) {
@@ -311,7 +313,7 @@ function renderDashboard(data) {
     if (headElem) headElem.innerText = text;
   });
 
-  // ✅ CONFIG.EXCLUDED_ALERT_TYPES(GAS, COOLING, FREEZING)에 포함된 항목 필터링
+  // CONFIG.EXCLUDED_ALERT_TYPES(GAS, COOLING, FREEZING) 포함 항목 필터링
   const validAlertItems = (data.alert_items || []).filter(item => !CONFIG.EXCLUDED_ALERT_TYPES.includes(item.type));
   showAlertBanner(validAlertItems);
 }
@@ -703,7 +705,7 @@ function showAlertBanner(items) {
 
     if (hasNewAlarm) {
       STATE.isSoundMutedByUser = false;
-      // startContinuousAlarm(); // 경고 알림음 활성화 필요 시 주석 해제
+      // startContinuousAlarm();
     }
 
     if ("Notification" in window && Notification.permission === "granted") {
