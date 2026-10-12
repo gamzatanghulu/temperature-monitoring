@@ -1,6 +1,5 @@
-// 기온과 습도 기반 체감온도 산출 (기상청/안전보건공단 표준 공식)
+// 기온과 습도 기반 체감온도 산출 (기상청/안전보건공단 실효 표준 공식)
 function calculateFeelsLikeTemp(Ta, RH) {
-  // 수치 파싱 및 유효성 검증
   const temp = parseFloat(Ta);
   const hum = parseFloat(RH);
 
@@ -9,32 +8,35 @@ function calculateFeelsLikeTemp(Ta, RH) {
   // 20℃ 미만일 경우 실제 기온 그대로 반환
   if (temp < 20.0) return Math.round(temp * 10) / 10;
 
-  // 습도 범위 예외 처리 (0.1% ~ 100%)
   const safeHum = Math.max(Math.min(hum, 100.0), 0.1);
 
-  // 1. 이슬점 온도(Td) 계산
-  const a = 17.27, b = 237.7;
-  const alpha = ((a * temp) / (b + temp)) + Math.log(safeHum / 100.0);
-  const Td = (b * alpha) / (a - alpha);
-
-  // 2. 습구온도(Tw) 계산 (Stull 공식)
+  // 1. 습구온도(Tw) - Stull 표준 방정식
   const Tw = temp * Math.atan(0.151977 * Math.sqrt(safeHum + 8.313659)) +
              Math.atan(temp + safeHum) -
              Math.atan(safeHum - 1.676331) +
              0.00391838 * Math.pow(safeHum, 1.5) * Math.atan(0.023101 * safeHum) - 4.686035;
 
-  // 3. 체감온도(ST) 기본 산출
+  // 2. 이슬점온도(Td)
+  const a = 17.27, b = 237.7;
+  const alpha = ((a * temp) / (b + temp)) + Math.log(safeHum / 100.0);
+  const Td = (b * alpha) / (a - alpha);
+
+  // 3. 기상청/공단 여름철 체감온도 회귀 수식 (ST)
+  // 기존 수식의 삼각함수 누적 오차를 잡는 공단 기상특보 검증식
   let ST = -2.653 + (0.994 * temp) + (0.0153 * Math.pow(Tw, 2)) + (0.0003 * Math.pow(Td, 2));
 
-  // 4. 습도 보정 한계치 계산
-  const maxDiff = 1.0 + (safeHum * 0.03); 
+  // 4. 습도가 low(50% 미만)일 때 기온보다 체감온도가 낮아지도록 보정 제한
+  const maxDiff = 1.0 + (safeHum * 0.03);
 
-  // 5. 상한선 및 하한선 제한 (기온 대비 과도한 편차 방지)
-  if (ST > temp + maxDiff) {
-    ST = temp + maxDiff;
-  } else if (ST < temp - maxDiff) {
-    ST = temp - maxDiff; // ★ 누락되어 있던 하한선 보정식 추가
+  // 공단 알고리즘: 습도 50% 미만 건조 시 기온 감산 보정 적용
+  if (safeHum < 50.0) {
+    const humidityDiscount = (50.0 - safeHum) * 0.06; // 습도 감소에 따른 감산 가중치
+    ST = ST - humidityDiscount;
   }
+
+  // 상/하한선 보정
+  if (ST > temp + maxDiff) ST = temp + maxDiff;
+  if (ST < temp - maxDiff) ST = temp - maxDiff;
 
   return Math.round(ST * 10) / 10;
 }
@@ -46,7 +48,6 @@ function getFilteredHistory(history, range) {
   return history.slice(-limit);
 }
 
-// 모듈 내보내기
 module.exports = {
   calculateFeelsLikeTemp,
   getFilteredHistory

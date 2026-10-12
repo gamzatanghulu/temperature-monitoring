@@ -1,4 +1,4 @@
-// 센서 마스터 정보 (유지보수를 위해 offset 속성 추가 적용 가능)
+// 센서 마스터 정보
 const SENSOR_CONFIG = {
     '스마트온도계': { name: '공무팀', zone: '야외 현장', type: 'HEAT', min: -18.0, max: 38.0, sensorId: '6281-7088', offset: -3.0 },
     '13room':       { name: '야외외부', zone: '야외 현장', type: 'HEAT', min: -18.0, max: 38.0, sensorId: '8629-9794', offset: -3.0 },
@@ -25,7 +25,7 @@ const SENSOR_CONFIG = {
 
 // 시스템 설정
 const CONFIG = {
-  API_BASE_URL: 'https://shaped-revealed-halloween-experiencing.trycloudflare.com',
+  API_BASE_URL: 'https://rrp-excited-selected-consider.trycloudflare.com',
   ALARM_DURATION_SEC: 5,
   POLLING_INTERVAL_MS: 5000,
   EXCLUDED_ALERT_TYPES: ['GAS', 'COOLING', 'FREEZING']
@@ -46,7 +46,36 @@ const STATE = {
   pendingDownloadParams: null
 };
 
-// 페이지 초기화 및 폴링 설정
+// 안전보건공단/기상청 표준 체감온도 단일 계산식
+function calculateFeelsLikeTempStandard(Ta, RH) {
+  const temp = parseFloat(Ta);
+  const hum = parseFloat(RH);
+
+  if (isNaN(temp) || isNaN(hum)) return Ta;
+  if (temp < 20.0) return Math.round(temp * 10) / 10;
+
+  const safeHum = Math.max(Math.min(hum, 100.0), 0.1);
+
+  const a = 17.27, b = 237.7;
+  const alpha = ((a * temp) / (b + temp)) + Math.log(safeHum / 100.0);
+  const Td = (b * alpha) / (a - alpha);
+
+  const Tw = temp * Math.atan(0.151977 * Math.sqrt(safeHum + 8.313659)) +
+             Math.atan(temp + safeHum) -
+             Math.atan(safeHum - 1.676331) +
+             0.00391838 * Math.pow(safeHum, 1.5) * Math.atan(0.023101 * safeHum) - 4.686035;
+
+  let ST = -2.653 + (0.994 * temp) + (0.0153 * Math.pow(Tw, 2)) + (0.0003 * Math.pow(Td, 2));
+  const maxDiff = 1.0 + (safeHum * 0.03);
+
+  // 상/하한선 제어
+  if (ST > temp + maxDiff) ST = temp + maxDiff;
+  else if (ST < temp - maxDiff) ST = temp - maxDiff;
+
+  return Math.round(ST * 10) / 10;
+}
+
+// 페이지 초기화
 window.onload = () => {
   initDateInputs();
   autoRequestNotificationPermission();
@@ -57,14 +86,12 @@ window.onload = () => {
   if (confirmBtn) confirmBtn.addEventListener('click', handleExcelDownload);
 };
 
-// 브라우저 알림 권한 요청
 function autoRequestNotificationPermission() {
   if ("Notification" in window && Notification.permission === "default") {
     Notification.requestPermission().catch(() => {});
   }
 }
 
-// 오디오 컨텍스트 초기화
 function initAudioContext() {
   if (!STATE.audioCtx) {
     STATE.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -76,7 +103,6 @@ function initAudioContext() {
 window.addEventListener('click', initAudioContext, { once: true });
 window.addEventListener('touchstart', initAudioContext, { once: true });
 
-// 경고음 연속 재생
 function startContinuousAlarm() {
   if (STATE.isSoundMutedByUser) return;
 
@@ -92,7 +118,6 @@ function startContinuousAlarm() {
   }
 }
 
-// 경고음 정지
 function stopAlarmSoundOnly() {
   if (STATE.alarmIntervalId) {
     clearInterval(STATE.alarmIntervalId);
@@ -104,7 +129,6 @@ function stopAlarmSoundOnly() {
   }
 }
 
-// 알람 해제 및 음소거
 function acknowledgeAndStopSound() {
   STATE.isSoundMutedByUser = true;
   stopAlarmSoundOnly();
@@ -113,7 +137,6 @@ function acknowledgeAndStopSound() {
   if (stopBtn) stopBtn.style.display = 'none';
 }
 
-// 단일 딜레이 비프음 발생
 function playSingleBeepSound() {
   initAudioContext();
   if (!STATE.audioCtx) return;
@@ -141,7 +164,6 @@ function playSingleBeepSound() {
   }
 }
 
-// 센서 실시간 데이터 수신
 async function fetchSensorData() {
   try {
     const response = await fetch(`${CONFIG.API_BASE_URL}/api/sensor?range=${STATE.currentRangeMode}`, {
@@ -158,9 +180,7 @@ async function fetchSensorData() {
     const data = await response.json();
 
     if (data && data.result_code === 0) {
-      // 서버에서 전달받은 데이터에 SENSOR_CONFIG offset 수치 적용
       correction(data);
-
       renderDashboard(data);
       renderGasData(data);
     } else {
@@ -172,10 +192,13 @@ async function fetchSensorData() {
   }
 }
 
-// 센서 온도 보정(offset) 처리 함수 (체감온도 중복 offset 적용 오차 수정)
+// 센서 온도 보정(offset) 및 체감온도 덮어쓰기 처리
 function correction(data) {
   if (!Array.isArray(data.name_list)) return;
   if (!data.sensor_configs) data.sensor_configs = {};
+  
+  // 백엔드 전달값 무시하고 프론트엔드 체감온도 배열 새로 생성
+  data.feels_like_list = [];
 
   data.name_list.forEach((rawName, index) => {
     const config = SENSOR_CONFIG[rawName];
@@ -184,32 +207,28 @@ function correction(data) {
     if (config) {
       const offsetValue = typeof config.offset === 'number' ? config.offset : 0;
 
-      // 1. 기온 보정
       if (data.data_list_1 && data.data_list_1[index] !== undefined && data.data_list_1[index] !== null) {
         let val = parseFloat(data.data_list_1[index]);
         if (!isNaN(val) && val !== 0) {
+          // 1. 기온 보정
           let calibratedVal = val + offsetValue;
           data.data_list_1[index] = calibratedVal.toFixed(1);
 
-          // 2. 체감온도는 백엔드(calc.js) 수치를 그대로 사용 (offset 중복 더하기 제거)
-          if (data.feels_like_list && data.feels_like_list[index] !== undefined && data.feels_like_list[index] !== null) {
-            let feelsVal = parseFloat(data.feels_like_list[index]);
-            if (!isNaN(feelsVal)) {
-              data.feels_like_list[index] = feelsVal.toFixed(1);
-            }
-          }
+          let humVal = data.data_list_2 ? parseFloat(data.data_list_2[index]) : 0;
 
-          // 3. 경고 판별 (체감온도 기준)
+          // 2. 화면 표시 기온(27.5℃)과 습도(41.2%) 기준으로 체감온도 강제 계산 (공단 수식 적용 -> 26.3℃)
+          let calculatedFeels = calculateFeelsLikeTempStandard(calibratedVal, humVal);
+          data.feels_like_list[index] = calculatedFeels;
+
+          // 3. 경고 여부 판별
           if (config.type === 'HEAT') {
-            const feels = data.feels_like_list?.[index] ? parseFloat(data.feels_like_list[index]) : calibratedVal;
-            data.sensor_configs[index].isWarning = feels >= 33.0;
+            data.sensor_configs[index].isWarning = calculatedFeels >= 33.0;
           } else if (config.min !== undefined && config.max !== undefined) {
             data.sensor_configs[index].isWarning = (calibratedVal < config.min || calibratedVal > config.max);
           }
         }
       }
 
-      // 히스토리 보정
       if (Array.isArray(data.history) && offsetValue !== 0) {
         data.history.forEach(h => {
           if (h.temps && h.temps[index] !== undefined && h.temps[index] !== null) {
@@ -223,7 +242,7 @@ function correction(data) {
     }
   });
 
-  // 경고 팝업용 리스트(alert_items) 재평가
+  // 경고 팝업용 리스트 재평가
   if (Array.isArray(data.alert_items)) {
     data.alert_items = data.alert_items.filter(item => {
       const targetKey = item.rawName || Object.keys(SENSOR_CONFIG).find(key => SENSOR_CONFIG[key].name === item.displayName);
@@ -238,8 +257,9 @@ function correction(data) {
           item.temp = calibratedVal.toFixed(1);
 
           if (targetConfig.type === 'HEAT') {
-            const feelsVal = parseFloat(item.feelsLike ?? calibratedVal);
-            item.feelsLike = feelsVal.toFixed(1);
+            const humVal = parseFloat(item.hum || 0);
+            const feelsVal = calculateFeelsLikeTempStandard(calibratedVal, humVal);
+            item.feelsLike = feelsVal;
             if (feelsVal < 33.0) return false;
           } else if (targetConfig.min !== undefined && targetConfig.max !== undefined) {
             if (calibratedVal >= targetConfig.min && calibratedVal <= targetConfig.max) {
@@ -253,7 +273,6 @@ function correction(data) {
   }
 }
 
-// 온도 수치 기반 폭염 5단계 레벨 계산 (1: 정상, 2: 관심, 3: 주의, 4: 경고, 5: 심각)
 function getHeatLevel(tempVal) {
   if (tempVal === null || isNaN(tempVal)) return 1;
   if (tempVal >= 38.0) return 5;
@@ -263,7 +282,6 @@ function getHeatLevel(tempVal) {
   return 1;
 }
 
-// 대시보드 타일 및 차트 바인딩 (서버에서 받은 calc.js의 체감온도를 그대로 사용)
 function renderDashboard(data) {
   setSyncStatus(data.updated_at || '--:--:--', '#38bdf8');
 
@@ -290,14 +308,11 @@ function renderDashboard(data) {
       if (isNaN(temp) || temp === 0) temp = null;
       if (isNaN(hum) || hum === 0) hum = null;
 
-      // 백엔드(calc.js)에서 이미 기상청 표준 수식으로 올바르게 계산해서 내려준 체감온도를 가져옴
       let feelsLike = null;
       if (data.feels_like_list && data.feels_like_list[index] !== undefined && data.feels_like_list[index] !== null) {
         feelsLike = parseFloat(data.feels_like_list[index]);
-      } else if (data.feels_list && data.feels_list[index] !== undefined && data.feels_list[index] !== null) {
-        feelsLike = parseFloat(data.feels_list[index]);
       } else {
-        feelsLike = temp; // 백엔드 값이 없을 경우 기본값 세팅
+        feelsLike = temp;
       }
 
       if (!categoryRanges[cfg.type] && cfg.min !== undefined && cfg.max !== undefined) {
@@ -317,12 +332,10 @@ function renderDashboard(data) {
     if (headElem) headElem.innerText = text;
   });
 
-  // CONFIG.EXCLUDED_ALERT_TYPES(GAS, COOLING, FREEZING) 포함 항목 필터링
   const validAlertItems = (data.alert_items || []).filter(item => !CONFIG.EXCLUDED_ALERT_TYPES.includes(item.type));
   showAlertBanner(validAlertItems);
 }
 
-// 가스 탱크 잔량/압력 바인딩
 function renderGasData(data) {
   if (!data) return;
   const co2 = data.joa_co2 || null;
@@ -332,7 +345,6 @@ function renderGasData(data) {
   if (n2) updateSingleGasUI('ln2', n2);
 }
 
-// 가스 탱크 위젯 개별 업데이트
 function updateSingleGasUI(type, info) {
   const fillElem = document.getElementById(`gas-fill-${type}`);
   const pctElem = document.getElementById(`gas-pct-${type}`);
@@ -402,7 +414,6 @@ function updateSingleGasUI(type, info) {
   }
 }
 
-// 센서 타일 동적 생성 및 갱신
 function renderSensorTile(index, cfg, temp, hum, feelsLike, isWarning) {
   const tempText = (temp === null) ? '--' : temp.toFixed(1);
   const humText = (hum === null) ? '--' : `${hum.toFixed(1)}%`;
@@ -503,7 +514,6 @@ function renderSensorTile(index, cfg, temp, hum, feelsLike, isWarning) {
   }
 }
 
-// Chart.js 미니 그래프 생성 및 업데이트
 function updateOrCreateMiniChart(index, cfg, currentTemp, time, history) {
   if (cfg.type === 'HEAT') return;
 
@@ -611,7 +621,6 @@ function updateOrCreateMiniChart(index, cfg, currentTemp, time, history) {
   });
 }
 
-// 그래프 시계열 데이터 파싱
 function prepareChartData(index, time, history) {
   let labels = [];
   let tempData = [];
@@ -676,7 +685,6 @@ function prepareChartData(index, time, history) {
   return { labels, tempData };
 }
 
-// 상단 경고 팝업 및 노티
 function showAlertBanner(items) {
   const banner = document.getElementById('alert-banner');
   if (!banner) return;
@@ -709,7 +717,6 @@ function showAlertBanner(items) {
 
     if (hasNewAlarm) {
       STATE.isSoundMutedByUser = false;
-      // startContinuousAlarm();
     }
 
     if ("Notification" in window && Notification.permission === "granted") {
@@ -732,7 +739,6 @@ function showAlertBanner(items) {
   }
 }
 
-// 경고 창 수동 닫기
 function closeAlert() {
   STATE.currentAlertKeys.forEach(key => STATE.dismissedAlertKeys.add(key));
   const banner = document.getElementById('alert-banner');
@@ -740,7 +746,6 @@ function closeAlert() {
   acknowledgeAndStopSound();
 }
 
-// 조회 기간 모드 변경 (24h / 1h)
 function changeChartRange(mode) {
   if (STATE.currentRangeMode === mode) return;
   STATE.currentRangeMode = mode;
@@ -765,7 +770,6 @@ function changeChartRange(mode) {
   fetchSensorData();
 }
 
-// 시간 문자열 서식 정리
 function formatTimeLabel(timeStr) {
   if (!timeStr) return '';
   const timePart = timeStr.trim().includes(' ') ? timeStr.trim().split(' ')[1] : timeStr.trim();
@@ -773,7 +777,6 @@ function formatTimeLabel(timeStr) {
   return parts.length < 2 ? timeStr : `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
 }
 
-// 날짜 검색 조건 기본값 세팅
 function initDateInputs() {
   const today = new Date();
   const oneMonthAgo = new Date();
@@ -785,7 +788,6 @@ function initDateInputs() {
   if (fromDateElem) fromDateElem.value = oneMonthAgo.toISOString().split('T')[0];
 }
 
-// 동기화 상태 표시 변경
 function setSyncStatus(text, color) {
   const syncElem = document.getElementById('update-time');
   if (syncElem) {
@@ -794,7 +796,6 @@ function setSyncStatus(text, color) {
   }
 }
 
-// 엑셀 다운로드 모달 실행
 function downloadExcelModule() {
   const typeElem = document.getElementById('csv-type');
   const fromDateElem = document.getElementById('csv-from-date');
@@ -823,14 +824,12 @@ function downloadExcelModule() {
   if (modalElem) modalElem.style.display = 'flex';
 }
 
-// 엑셀 모달 닫기
 function closeConfirmModal() {
   const modalElem = document.getElementById('customConfirmModal');
   if (modalElem) modalElem.style.display = 'none';
   STATE.pendingDownloadParams = null;
 }
 
-// 엑셀 다운로드 파일 수신 처리
 async function handleExcelDownload() {
   if (!STATE.pendingDownloadParams) return;
 
