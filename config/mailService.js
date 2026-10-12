@@ -187,36 +187,36 @@ async function sendEmailNotification({ items = [], emailType = 'ALERT', isTest =
 
 module.exports = { sendEmailNotification };
 
-// ----------------------------------------------------
-// [1회성 테스트 실행용 코드]
-// ----------------------------------------------------
-async function testToJoker() {
-  console.log('joker@choheung.co.kr 주소로 최종 제목 테스트 발송 중...');
+// // ----------------------------------------------------
+// // [1회성 테스트 실행용 코드]
+// // ----------------------------------------------------
+// async function testToJoker() {
+//   console.log('joker@choheung.co.kr 주소로 최종 제목 테스트 발송 중...');
 
-  const mockAlertItems = [
-    {
-      rawName: '1팀외박스실',
-      displayName: '1팀박스실',
-      zone: '현장 온열',
-      type: 'PROD1',
-      temp: 39.2,
-      hum: 68.0,
-      min: -18.0,
-      max: 38.0
-    }
-  ];
+//   const mockAlertItems = [
+//     {
+//       rawName: '1팀외박스실',
+//       displayName: '1팀박스실',
+//       zone: '현장 온열',
+//       type: 'PROD1',
+//       temp: 39.2,
+//       hum: 68.0,
+//       min: -18.0,
+//       max: 38.0
+//     }
+//   ];
 
-  try {
-    await sendEmailNotification({
-      items: mockAlertItems,
-      emailType: 'ALERT',
-      isTest: false,
-      targetEmail: 'joker@choheung.co.kr'
-    });
-    console.log('✅ 발송 성공! joker@choheung.co.kr 수신함에서 새 제목을 확인해 보세요.');
-  } catch (err) {
-    console.error('❌ 발송 실패:', err.message);
-  }
-}
+//   try {
+//     await sendEmailNotification({
+//       items: mockAlertItems,
+//       emailType: 'ALERT',
+//       isTest: false,
+//       targetEmail: 'joker@choheung.co.kr'
+//     });
+//     console.log('✅ 발송 성공! joker@choheung.co.kr 수신함에서 새 제목을 확인해 보세요.');
+//   } catch (err) {
+//     console.error('❌ 발송 실패:', err.message);
+//   }
+// }
 
-testToJoker();
+// testToJoker();
