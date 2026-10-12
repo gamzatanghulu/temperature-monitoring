@@ -25,7 +25,7 @@ const SENSOR_CONFIG = {
 
 // 시스템 설정 (✅ 냉장, 냉동 및 가스를 화면 경고 팝업 제외 대상으로 지정)
 const CONFIG = {
-  API_BASE_URL: 'https://planner-smallest-avon-handled.trycloudflare.com',
+  API_BASE_URL: 'https://bedford-nor-florida-handle.trycloudflare.com',
   ALARM_DURATION_SEC: 5,
   POLLING_INTERVAL_MS: 5000,
   EXCLUDED_ALERT_TYPES: ['GAS', 'COOLING', 'FREEZING']

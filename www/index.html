@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>스마트 온·습도 및 고압가스 통합 관제 시스템</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+  <div class="dashboard">
+
+    <!-- [상단 헤더] 한 줄 전면 통합 영역 -->
+    <header class="header">
+      <div class="header-left">
+        <div class="logo-wrapper">
+          <img src="choheung_logo.png" alt="로고" class="company-logo" onError="this.style.display='none'; document.getElementById('logo-fallback').style.display='inline-block';">
+          <span id="logo-fallback" class="logo-fallback" style="display:none;">CHOHEUNG GF</span>
+        </div>
+        <div class="header-title-box">
+          <h1>종합 모니터링 시스템</h1>
+        </div>
+      </div>
+
+      <div class="status-panel">
+        <div class="range-toggle-group">
+          <button id="btn-range-24h" class="btn-range active" onclick="changeChartRange('24h')">24시간 보기</button>
+          <button id="btn-range-1h" class="btn-range" onclick="changeChartRange('1h')">1시간 보기</button>
+        </div>
+
+        <div class="update-badge">동기화: <span id="update-time">--:--</span></div>
+
+        <div class="excel-control-box">
+          <input type="date" id="csv-from-date">
+          <span class="date-sep">~</span>
+          <input type="date" id="csv-to-date">
+          <select id="csv-type">
+            <option value="1">일일 집계</option>
+            <option value="2">시간대별 집계</option>
+            <option value="3">5분 단위 집계</option>
+          </select>
+          <button type="button" class="btn-excel" onclick="downloadExcelModule()">엑셀 다운로드</button>
+        </div>
+
+        <button id="stopAlarmBtn" class="btn-stop-alarm" onclick="acknowledgeAndStopSound()">🚨 경고 확인</button>
+      </div>
+    </header>
+
+    <!-- [알림 바] -->
+    <div id="alert-banner" class="alert-banner">
+      <div><span>[시스템 경고] </span><span id="alert-message">이상 데이터가 감지되었습니다.</span></div>
+      <button type="button" onclick="closeAlert()" class="btn-close-alert">[닫기]</button>
+    </div>
+
+    <!-- [메인 3분할 레이아웃] -->
+    <main class="main-grid">
+
+      <!-- ================= 1열 (좌측) ================= -->
+      <div class="column">
+        <!-- 고압가스 카운터 -->
+        <section class="gas-section">
+          <!-- 탄산 (LCO2) -->
+          <div class="gas-card-compact lco2">
+            <div class="gas-tank-visual">
+              <div class="tank-cap">LCO2</div>
+              <div class="tank-body">
+                <div class="tank-fill lco2-fill" id="gas-fill-lco2" style="height: 0%;"></div>
+                <span class="tank-percent" id="gas-pct-lco2">--%</span>
+              </div>
+            </div>
+            <div class="gas-details">
+              <div class="gas-title-line">
+                <span class="gas-name">탄산 (LCO2) 탱크</span>
+                <span class="gas-status-badge ok" id="gas-status-lco2">정상 가동</span>
+              </div>
+              <div class="gas-data-grid">
+                <!-- 잔량 및 잔량 상태 태그 -->
+                <div class="gas-data-item">
+                  <div class="gas-data-header-flex">
+                    <span class="gas-data-label">잔량 / 저장용량</span>
+                    <div class="gas-tag-group" id="gas-weight-status-lco2">
+                      <span class="gas-tag off">과부족</span>
+                      <span class="gas-tag off">적정량</span>
+                    </div>
+                  </div>
+                  <span class="gas-data-value highlight-red" id="gas-weight-lco2">-- kg / -- kg</span>
+                </div>
+                <!-- 내부 압력 및 압력 3단계 태그 -->
+                <div class="gas-data-item">
+                  <div class="gas-data-header-flex">
+                    <span class="gas-data-label">내부 압력</span>
+                    <div class="gas-tag-group" id="gas-press-status-lco2">
+                      <span class="gas-tag off">저압</span>
+                      <span class="gas-tag off">정상 (10~20bar)</span>
+                      <span class="gas-tag off">고압</span>
+                    </div>
+                  </div>
+                  <span class="gas-data-value" id="gas-press-val-lco2">-- bar</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 질소 (LN2) -->
+          <div class="gas-card-compact ln2">
+            <div class="gas-tank-visual">
+              <div class="tank-cap ln2-cap">LN2</div>
+              <div class="tank-body">
+                <div class="tank-fill ln2-fill" id="gas-fill-ln2" style="height: 0%;"></div>
+                <span class="tank-percent" id="gas-pct-ln2">--%</span>
+              </div>
+            </div>
+            <div class="gas-details">
+              <div class="gas-title-line">
+                <span class="gas-name">질소 (LN2) 탱크</span>
+                <span class="gas-status-badge ok" id="gas-status-ln2">정상 가동</span>
+              </div>
+              <div class="gas-data-grid">
+                <!-- 잔량 및 잔량 상태 태그 -->
+                <div class="gas-data-item">
+                  <div class="gas-data-header-flex">
+                    <span class="gas-data-label">잔량 / 저장용량</span>
+                    <div class="gas-tag-group" id="gas-weight-status-ln2">
+                      <span class="gas-tag off">과부족</span>
+                      <span class="gas-tag off">적정량</span>
+                    </div>
+                  </div>
+                  <span class="gas-data-value highlight-purple" id="gas-weight-ln2">-- kg / -- kg</span>
+                </div>
+                <!-- 내부 압력 및 압력 3단계 태그 -->
+                <div class="gas-data-item">
+                  <div class="gas-data-header-flex">
+                    <span class="gas-data-label">내부 압력</span>
+                    <div class="gas-tag-group" id="gas-press-status-ln2">
+                      <span class="gas-tag off">저압</span>
+                      <span class="gas-tag off">정상 (8~20bar)</span>
+                      <span class="gas-tag off">고압</span>
+                    </div>
+                  </div>
+                  <span class="gas-data-value" id="gas-press-val-ln2">-- bar</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 폭염 관제 패널 -->
+        <section class="category-panel">
+          <div class="panel-header">
+            <span class="panel-title" style="color: red;">폭염/온열 관제</span>
+            <span class="range-header-text" id="header-range-HEAT">야외 / 온열 질환 관리</span>
+          </div>
+
+          <div class="table-headers table-headers-heat">
+            <div>센서명</div>
+            <div>온도</div>
+            <div>습도</div>
+            <div id="chart-header-title-HEAT">폭염/온열 단계</div>
+          </div>
+          <div class="sensor-tile-container" id="container-HEAT"></div>
+        </section>
+      </div>
+
+      <!-- ================= 2열 (중앙) ================= -->
+      <div class="column">
+        <!-- 상단: 생산 1팀 -->
+        <section class="category-panel">
+          <div class="panel-header">
+            <span class="panel-title" style="color: #fb923c;">생산 1팀</span>
+            <span class="range-header-text" id="header-range-PROD1">0.0℃ ~ 50.0℃</span>
+          </div>
+          <div class="table-headers">
+            <div>센서명</div>
+            <div>온도</div>
+            <div>습도</div>
+            <div id="chart-header-title-PROD1">24시간 그래프</div>
+          </div>
+          <div class="sensor-tile-container" id="container-PROD1"></div>
+        </section>
+
+        <!-- 하단: 생산 2팀 -->
+        <section class="category-panel">
+          <div class="panel-header">
+            <span class="panel-title" style="color: #ffdda1;">생산 2팀</span>
+            <span class="range-header-text" id="header-range-PROD2">0.0℃ ~ 36.0℃</span>
+          </div>
+          <div class="table-headers">
+            <div>센서명</div>
+            <div>온도</div>
+            <div>습도</div>
+            <div id="chart-header-title-PROD2">24시간 그래프</div>
+          </div>
+          <div class="sensor-tile-container" id="container-PROD2"></div>
+        </section>
+      </div>
+
+      <!-- ================= 3열 (우측) ================= -->
+      <div class="column">
+        <!-- 상단: 냉장 창고 -->
+        <section class="category-panel">
+          <div class="panel-header">
+            <span class="panel-title" style="color: #38bdf8;">냉장 창고</span>
+            <span class="range-header-text" id="header-range-COOLING">0.0℃ ~ 5.0℃</span>
+          </div>
+          <div class="table-headers">
+            <div>센서명</div>
+            <div>온도</div>
+            <div>습도</div>
+            <div id="chart-header-title-COOLING">24시간 그래프</div>
+          </div>
+          <div class="sensor-tile-container" id="container-COOLING"></div>
+        </section>
+        <!-- 하단: 냉동 창고 -->
+        <section class="category-panel">
+          <div class="panel-header">
+            <span class="panel-title" style="color: #c084fc;">냉동 창고</span>
+            <span class="range-header-text" id="header-range-FREEZING">-25.0℃ ~ -12.0℃</span>
+          </div>
+          <div class="table-headers">
+            <div>센서명</div>
+            <div>온도</div>
+            <div>습도</div>
+            <div id="chart-header-title-FREEZING">24시간 그래프</div>
+          </div>
+          <div class="sensor-tile-container" id="container-FREEZING"></div>
+        </section>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- 엑셀 모달 -->
+  <div id="customConfirmModal" class="modal-backdrop">
+    <div class="modal-box">
+      <h3>엑셀 보고서 다운로드</h3>
+      <p class="modal-desc">선택하신 조건으로 데이터 추출을 진행합니다.</p>
+      <div class="modal-detail">
+        <div class="modal-row"><span>조회 기간:</span><strong id="modalPeriodText">-</strong></div>
+        <div class="modal-row" style="margin-top: 4px;"><span>집계 단위:</span><strong id="modalTypeText">-</strong></div>
+      </div>
+      <p class="modal-confirm-text">다운로드를 진행하시겠습니까?</p>
+      <div class="modal-btn-group">
+        <button type="button" id="confirmDownloadBtn" class="btn-modal-confirm">다운로드</button>
+        <button type="button" onclick="closeConfirmModal()" class="btn-modal-cancel">취소</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/main.js"></script>
+</body>
+
+</html>
