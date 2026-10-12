@@ -25,7 +25,7 @@ const SENSOR_CONFIG = {
 
 // 시스템 설정
 const CONFIG = {
-  API_BASE_URL: 'https://trance-basic-downloadable-graduate.trycloudflare.com',
+  API_BASE_URL: 'https://shaped-revealed-halloween-experiencing.trycloudflare.com',
   ALARM_DURATION_SEC: 5,
   POLLING_INTERVAL_MS: 5000,
   EXCLUDED_ALERT_TYPES: ['GAS', 'COOLING', 'FREEZING']
@@ -172,7 +172,7 @@ async function fetchSensorData() {
   }
 }
 
-// 센서 온도 보정(offset) 처리 함수
+// 센서 온도 보정(offset) 처리 함수 (체감온도 중복 offset 적용 오차 수정)
 function correction(data) {
   if (!Array.isArray(data.name_list)) return;
   if (!data.sensor_configs) data.sensor_configs = {};
@@ -181,24 +181,25 @@ function correction(data) {
     const config = SENSOR_CONFIG[rawName];
     if (!data.sensor_configs[index]) data.sensor_configs[index] = {};
 
-    if (config && typeof config.offset === 'number') {
-      const offsetValue = config.offset;
+    if (config) {
+      const offsetValue = typeof config.offset === 'number' ? config.offset : 0;
 
+      // 1. 기온 보정
       if (data.data_list_1 && data.data_list_1[index] !== undefined && data.data_list_1[index] !== null) {
         let val = parseFloat(data.data_list_1[index]);
         if (!isNaN(val) && val !== 0) {
           let calibratedVal = val + offsetValue;
           data.data_list_1[index] = calibratedVal.toFixed(1);
 
-          // 체감온도(feels_like_list)에도 보정값 offset을 동일하게 적용
+          // 2. 체감온도는 백엔드(calc.js) 수치를 그대로 사용 (offset 중복 더하기 제거)
           if (data.feels_like_list && data.feels_like_list[index] !== undefined && data.feels_like_list[index] !== null) {
             let feelsVal = parseFloat(data.feels_like_list[index]);
             if (!isNaN(feelsVal)) {
-              data.feels_like_list[index] = (feelsVal + offsetValue).toFixed(1);
+              data.feels_like_list[index] = feelsVal.toFixed(1);
             }
           }
 
-          // 보정 온도를 기준으로 경고 판별
+          // 3. 경고 판별 (체감온도 기준)
           if (config.type === 'HEAT') {
             const feels = data.feels_like_list?.[index] ? parseFloat(data.feels_like_list[index]) : calibratedVal;
             data.sensor_configs[index].isWarning = feels >= 33.0;
@@ -208,7 +209,8 @@ function correction(data) {
         }
       }
 
-      if (Array.isArray(data.history)) {
+      // 히스토리 보정
+      if (Array.isArray(data.history) && offsetValue !== 0) {
         data.history.forEach(h => {
           if (h.temps && h.temps[index] !== undefined && h.temps[index] !== null) {
             let hVal = parseFloat(h.temps[index]);
@@ -227,14 +229,16 @@ function correction(data) {
       const targetKey = item.rawName || Object.keys(SENSOR_CONFIG).find(key => SENSOR_CONFIG[key].name === item.displayName);
       const targetConfig = targetKey ? SENSOR_CONFIG[targetKey] : null;
 
-      if (targetConfig && typeof targetConfig.offset === 'number') {
+      if (targetConfig) {
+        const offsetVal = typeof targetConfig.offset === 'number' ? targetConfig.offset : 0;
         let alertVal = parseFloat(item.temp);
+        
         if (!isNaN(alertVal)) {
-          let calibratedVal = alertVal + targetConfig.offset;
+          let calibratedVal = alertVal + offsetVal;
           item.temp = calibratedVal.toFixed(1);
 
           if (targetConfig.type === 'HEAT') {
-            const feelsVal = parseFloat(item.feelsLike ?? calibratedVal) + targetConfig.offset;
+            const feelsVal = parseFloat(item.feelsLike ?? calibratedVal);
             item.feelsLike = feelsVal.toFixed(1);
             if (feelsVal < 33.0) return false;
           } else if (targetConfig.min !== undefined && targetConfig.max !== undefined) {
