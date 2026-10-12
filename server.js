@@ -29,8 +29,9 @@ const axiosClient = axios.create({
   timeout: 10000
 });
 
-// 실시간 상태 캐시 변수
+// 실시간 상태 및 발송 관리 변수
 const sensorStateMap = {}; 
+const lastEmailedDateMap = {}; // 센서별 당일 경보 메일 발송 날짜 추적 (YYYY-MM-DD)
 let sensorHistory = [];
 let cachedSensorData = {
   result_code: -1,
@@ -128,7 +129,17 @@ async function fetchAndProcessData() {
 
       const filteredNames = [], filteredTemps = [], filteredHums = [], feelsLikeTemps = [];
       const sensorConfigs = [], alertItems = [], itemsToSaveDb = [];
-      const newlyAlertedItems = [], newlyRecoveredItems = [];
+      const newlyAlertedItems = [];
+      const newlyRecoveredItems = [];
+
+      // 현재 한국 시간 기준 날짜 및 요일 체크
+      const now = new Date();
+      const koreaTimeString = now.toLocaleString('en-US', { timeZone: 'Asia/Seoul' });
+      const koreaDate = new Date(koreaTimeString);
+      
+      const todayStr = koreaDate.toISOString().split('T')[0]; // YYYY-MM-DD
+      const dayOfWeek = koreaDate.getDay(); // 0: 일요일, 6: 토요일
+      const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
 
       Object.keys(SENSOR_CONFIG).forEach((rawName) => {
         const cfg = SENSOR_CONFIG[rawName];
@@ -151,25 +162,19 @@ async function fetchAndProcessData() {
         // ----------------------------------------------------
         let isCurrentlyWarning = false;
 
-        // 1. 냉장, 냉동 창고는 메일 알림 조건 제외
         if (cfg.type === 'FREEZING' || cfg.type === 'COOLING') {
           isCurrentlyWarning = false;
-        } 
-        // 2. 폭염/온열 (HEAT): 체감온도 기준 '경고' 단계(33℃ 이상) 감지 시 알림
-        else if (cfg.type === 'HEAT') {
+        } else if (cfg.type === 'HEAT') {
           const targetFeelsLike = feelsLike ?? temp;
           if (targetFeelsLike !== null) {
-            isCurrentlyWarning = targetFeelsLike >= 33.0; // 폭염 '경고' 기준
+            isCurrentlyWarning = targetFeelsLike >= 33.0;
           }
-        } 
-        // 3. 탄산 / 질소 (GAS): 저압, 고압 또는 과부족 상태 시 알림 (직접 압력/잔량 정밀 체크)
-        else if (cfg.type === 'GAS') {
+        } else if (cfg.type === 'GAS') {
           const rawGas = sensorApiData?.rawGasData;
           if (rawGas) {
             const press = parseFloat(rawGas.pressure || 0);
             const weight = parseFloat(rawGas.weight || 0);
 
-            // 탄산(lco2)은 10bar 미만, 질소(ln2)는 8bar 미만 시 저압 판단
             const isCo2Low = (rawName === 'joa_co2' && press < 10.0);
             const isN2Low  = (rawName === 'joa_n2'  && press < 8.0);
             const isHighPress = press > 20.0;
@@ -179,14 +184,7 @@ async function fetchAndProcessData() {
             
             isCurrentlyWarning = isPressureAlert || isShortage;
           }
-        } 
-        // 4. 생산 1팀(PROD1), 생산 2팀(PROD2) 및 기타: 설정 범위(min ~ max) 이탈 시 알림
-        else if (cfg.type === 'PROD1' || cfg.type === 'PROD2') {
-          if (cfg.min !== undefined && cfg.max !== undefined && temp !== null) {
-            isCurrentlyWarning = (temp < cfg.min || temp > cfg.max);
-          }
-        }
-        else {
+        } else {
           if (cfg.min !== undefined && cfg.max !== undefined && temp !== null) {
             isCurrentlyWarning = (temp < cfg.min || temp > cfg.max);
           }
@@ -205,18 +203,36 @@ async function fetchAndProcessData() {
           max: cfg.max 
         };
 
-        // 경보 상태 변화 감지
-        if (isCurrentlyWarning && previousState === 'NORMAL') {
-          sensorStateMap[rawName] = 'WARNING';
-          newlyAlertedItems.push(itemObj);
-          console.warn(`경보 발생: [${cfg.name}] 이상 상태 감지`);
-        } else if (!isCurrentlyWarning && previousState === 'WARNING') {
-          sensorStateMap[rawName] = 'NORMAL';
-          newlyRecoveredItems.push(itemObj);
-          console.log(`경보 해제: [${cfg.name}] 정상 복귀`);
-        }
+        // 메일 발송 허용 조건 체크 (평일 전체 허용 / 주말은 가스(GAS)만 허용)
+        const isMailAllowed = !isWeekend || (isWeekend && cfg.type === 'GAS');
 
-        if (isCurrentlyWarning) alertItems.push(itemObj);
+        // 경보 발생 및 복구 상태 감지
+        if (isCurrentlyWarning) {
+          sensorStateMap[rawName] = 'WARNING';
+          alertItems.push(itemObj);
+
+          if (isMailAllowed) {
+            const lastEmailedDate = lastEmailedDateMap[rawName];
+            // 당일(todayStr)에 이미 경보 메일을 보낸 적이 없다면 최초 1회만 발송
+            if (lastEmailedDate !== todayStr) {
+              newlyAlertedItems.push(itemObj);
+              lastEmailedDateMap[rawName] = todayStr; // 오늘 날짜 기록
+              console.warn(`[경보 발생 메일 대상] ${cfg.name}`);
+            }
+          }
+        } else {
+          // 경보(WARNING)에서 정상(NORMAL) 상태로 복귀했을 때
+          if (previousState === 'WARNING') {
+            sensorStateMap[rawName] = 'NORMAL';
+
+            // 당일 경보 기록(lastEmailedDateMap)은 삭제하지 않고 유지합니다.
+            // 따라서 오늘 아무리 복구 후 경보가 재발생해도 경보 메일은 다시 나가지 않습니다.
+            if (isMailAllowed) {
+              newlyRecoveredItems.push(itemObj);
+              console.log(`[복구 메일 대상] ${cfg.name}`);
+            }
+          }
+        }
 
         filteredNames.push(rawName);
         filteredTemps.push(temp);
@@ -267,9 +283,13 @@ async function fetchAndProcessData() {
       sensorHistory.push({ time: currentTime, temps: filteredTemps, hums: filteredHums, feelsLikes: feelsLikeTemps });
       if (sensorHistory.length > 288) sensorHistory.shift();
 
-      // 알림 메일 발송
-      if (newlyAlertedItems.length > 0) await sendEmailNotification({ items: newlyAlertedItems, emailType: 'ALERT' });
-      if (newlyRecoveredItems.length > 0) await sendEmailNotification({ items: newlyRecoveredItems, emailType: 'RECOVERY' });
+      // 알림 메일 발송 (경보 건 및 복구 건 구분)
+      if (newlyAlertedItems.length > 0) {
+        await sendEmailNotification({ items: newlyAlertedItems, emailType: 'ALERT' });
+      }
+      if (newlyRecoveredItems.length > 0) {
+        await sendEmailNotification({ items: newlyRecoveredItems, emailType: 'RECOVERY' });
+      }
       
       console.log(`[${currentTime}] 데이터 갱신 완료 (수집 센서: ${filteredNames.length}개)`);
     } else {

@@ -13,33 +13,38 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-// 메일 제목 및 헤더 스타일 매핑
-function getEmailHeaderConfig(emailType, isTest, items) {
-  if (isTest) {
-    return { title: '통합 관제 시스템 연동 확인', bg: '#2563eb', badge: 'SYSTEM TEST' };
-  }
-  if (emailType === 'RECOVERY') {
-    return { title: '안전한 상태로 복구되었습니다', bg: '#059669', badge: 'STATUS RECOVERED' };
+// 메일 제목 생성 함수 ([경보] 센서명 (측정치) 포맷)
+function generateSubject(items, isTest) {
+  if (isTest) return '[시스템 테스트] 통합 관제 시스템 연결 확인';
+  if (!items || items.length === 0) return '[경보] 미확인 이상 상태 발생';
+
+  const firstItem = items[0];
+  const count = items.length;
+
+  // 1건 초과 복수 건 발생 시
+  if (count > 1) {
+    return `[경보] ${firstItem.displayName} 외 ${count - 1}건 이상 발생`;
   }
 
-  const firstType = items[0]?.type;
-  switch (firstType) {
+  // 단일 건 발생 시 요청하신 포맷으로 적용
+  const nameStr = firstItem.displayName || firstItem.rawName;
+
+  switch (firstItem.type) {
     case 'GAS':
-      return { title: '탄산/질소 용기 상태 이상 경보 (저압/고압/과부족)', bg: '#7c3aed', badge: 'GAS TANK ALERT' };
+      return `[경보] ${nameStr} (${firstItem.temp}kg / ${firstItem.hum}bar)`;
+
     case 'HEAT':
-      return { title: '폭염 / 온열질환 위험 경보 (경고 단계 도달)', bg: '#ea580c', badge: 'HEAT WAVE ALERT' };
-    case 'PROD1':
-      return { title: '생산 1팀 온·습도 적정 범위 이탈 경보', bg: '#dc2626', badge: 'PROD 1 ALERT' };
-    case 'PROD2':
-      return { title: '생산 2팀 온·습도 적정 범위 이탈 경보', bg: '#dc2626', badge: 'PROD 2 ALERT' };
+      const feelsLikeVal = firstItem.feelsLike !== undefined ? firstItem.feelsLike : firstItem.temp;
+      return `[경보] ${nameStr} (${firstItem.temp}℃ / 체감 ${feelsLikeVal}℃)`;
+
     default:
-      return { title: '긴급 관제 경고 리포트', bg: '#dc2626', badge: 'CRITICAL ALERT' };
+      return `[경보] ${nameStr} (${firstItem.temp}℃ / 습도 ${firstItem.hum}%)`;
   }
 }
 
 // 측정치 표기 HTML 생성
-function renderTempDisplay(item, isRecovery) {
-  const color = isRecovery ? '#059669' : '#dc2626';
+function renderTempDisplay(item) {
+  const color = '#dc2626';
 
   if (item.type === 'GAS') {
     return `<div style="font-size: 15px; font-weight: 800; color: ${color}; font-family: 'Consolas', monospace;">${item.temp} kg / ${item.hum} bar</div>`;
@@ -51,7 +56,7 @@ function renderTempDisplay(item, isRecovery) {
         ${item.temp}℃ <span style="font-size: 12px; color: #64748b; font-weight: 400;">(${item.hum}%)</span>
       </div>
       <div style="margin-top: 4px;">
-        <span style="display: inline-block; padding: 2px 8px; background-color: ${isRecovery ? '#ecfdf5' : '#fef2f2'}; color: ${color}; border: 1px solid ${isRecovery ? '#a7f3d0' : '#fecaca'}; border-radius: 6px; font-size: 11px; font-weight: 700;">
+        <span style="display: inline-block; padding: 2px 8px; background-color: #fef2f2; color: ${color}; border: 1px solid #fecaca; border-radius: 6px; font-size: 11px; font-weight: 700;">
           체감 ${item.feelsLike}℃
         </span>
       </div>`;
@@ -62,14 +67,10 @@ function renderTempDisplay(item, isRecovery) {
     <div style="font-size: 12px; color: #64748b; margin-top: 2px;">습도 ${item.hum}%</div>`;
 }
 
-// 관제 알림 이메일 발송
-async function sendEmailNotification({ items = [], emailType = 'ALERT', isTest = false }) {
+// 관제 알림 이메일 발송 함수
+async function sendEmailNotification({ items = [], emailType = 'ALERT', isTest = false, targetEmail = null }) {
   const nowStr = new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
-  const header = getEmailHeaderConfig(emailType, isTest, items);
-  
-  const subject = isTest
-    ? '[시스템 테스트] 통합 관제 시스템 연결 확인'
-    : `[${header.title}] 관제 시스템 리포트 (${nowStr})`;
+  const subject = generateSubject(items, isTest);
 
   const rowsHtml = isTest 
     ? `
@@ -94,15 +95,13 @@ async function sendEmailNotification({ items = [], emailType = 'ALERT', isTest =
           ${item.type === 'HEAT' ? '경고기준 33.0℃ 이상' : item.type === 'GAS' ? '압력/잔량 모니터링' : `${item.min} ~${item.max}℃`}
         </td>
         <td style="padding: 16px 20px; border-bottom: 1px solid #f1f5f9; text-align: right; vertical-align: middle;">
-          ${renderTempDisplay(item, emailType === 'RECOVERY')}
+          ${renderTempDisplay(item)}
         </td>
       </tr>`).join('');
 
   const bodyDescription = isTest
     ? '본 메일은 통합 관제 시스템의 이메일 발송 기능 테스트 메일입니다.'
-    : emailType === 'RECOVERY'
-      ? '점검 및 조치가 완료되어 센서가 정상 범위로 회복되었습니다.'
-      : '설정된 적정 범위를 이탈하거나 경고 조건이 발생한 항목이 감지되었습니다.';
+    : '설정된 적정 범위를 이탈하거나 경고 조건이 발생한 항목이 감지되었습니다.';
 
   const htmlContent = `<!DOCTYPE html>
 <html lang="ko">
@@ -114,20 +113,20 @@ async function sendEmailNotification({ items = [], emailType = 'ALERT', isTest =
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', 'Malgun Gothic', sans-serif; background-color: #f1f5f9; margin: 0; padding: 20px 10px; color: #1e293b;">
     <table align="center" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 640px; background-color: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; border-collapse: separate;">
         <tr>
-            <td style="background-color: ${header.bg}; padding: 28px 36px 32px 36px; color: #ffffff;">
+            <td style="background-color: #dc2626; padding: 28px 36px 32px 36px; color: #ffffff;">
                 <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 16px;">
                     <tr>
                         <td align="left" style="vertical-align: middle;">
                             <img src="cid:choheungLogo" alt="CHOHEUNG LOGO" style="display: block; max-height: 32px; width: auto; border: 0;" />
                         </td>
                         <td align="right" style="vertical-align: middle;">
-                            <span style="display: inline-block; padding: 4px 10px; background-color: #ffffff; color: ${header.bg}; border-radius: 20px; font-size: 11px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;">
-                                ${header.badge}
+                            <span style="display: inline-block; padding: 4px 10px; background-color: #ffffff; color: #dc2626; border-radius: 20px; font-size: 11px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;">
+                                CRITICAL ALERT
                             </span>
                         </td>
                     </tr>
                 </table>
-                <h1 style="margin: 0; font-size: 22px; font-weight: 800; line-height: 1.3; color: #ffffff;">${header.title}</h1>
+                <h1 style="margin: 0; font-size: 20px; font-weight: 800; line-height: 1.3; color: #ffffff;">${subject}</h1>
                 <p style="margin: 8px 0 0 0; font-size: 13px; color: #ffffff; opacity: 0.9; line-height: 1.5;">${bodyDescription}</p>
             </td>
         </tr>
@@ -137,7 +136,7 @@ async function sendEmailNotification({ items = [], emailType = 'ALERT', isTest =
                     <tr>
                         <td align="left" style="font-size: 13px; color: #64748b;"><b>발생 시각:</b> ${nowStr}</td>
                         <td align="right" style="font-size: 13px; color: #64748b;">
-                            <b>대상 항목:</b> <span style="color: ${emailType === 'RECOVERY' ? '#059669' : '#dc2626'}; font-weight: 700;">${isTest ? '0' : items.length}건</span>
+                            <b>대상 항목:</b> <span style="color: #dc2626; font-weight: 700;">${isTest ? '0' : items.length}건</span>
                         </td>
                     </tr>
                 </table>
@@ -162,9 +161,8 @@ async function sendEmailNotification({ items = [], emailType = 'ALERT', isTest =
 </body>
 </html>`;
 
-  // 세미콜론(;) 구분자를 쉼표(,)로 자동 변환하여 Nodemailer 문법 오류 방지
-  const safeTo = (RECEIVER_TO || '').replace(/;/g, ',').trim();
-  const safeCc = (RECEIVER_CC || '').replace(/;/g, ',').trim();
+  const safeTo = targetEmail ? targetEmail : (RECEIVER_TO || '').replace(/;/g, ',').trim();
+  const safeCc = targetEmail ? '' : (RECEIVER_CC || '').replace(/;/g, ',').trim();
 
   try {
     const info = await transporter.sendMail({
@@ -188,3 +186,37 @@ async function sendEmailNotification({ items = [], emailType = 'ALERT', isTest =
 }
 
 module.exports = { sendEmailNotification };
+
+// ----------------------------------------------------
+// [1회성 테스트 실행용 코드]
+// ----------------------------------------------------
+async function testToJoker() {
+  console.log('joker@choheung.co.kr 주소로 최종 제목 테스트 발송 중...');
+
+  const mockAlertItems = [
+    {
+      rawName: '1팀외박스실',
+      displayName: '1팀박스실',
+      zone: '현장 온열',
+      type: 'PROD1',
+      temp: 39.2,
+      hum: 68.0,
+      min: -18.0,
+      max: 38.0
+    }
+  ];
+
+  try {
+    await sendEmailNotification({
+      items: mockAlertItems,
+      emailType: 'ALERT',
+      isTest: false,
+      targetEmail: 'joker@choheung.co.kr'
+    });
+    console.log('✅ 발송 성공! joker@choheung.co.kr 수신함에서 새 제목을 확인해 보세요.');
+  } catch (err) {
+    console.error('❌ 발송 실패:', err.message);
+  }
+}
+
+testToJoker();
