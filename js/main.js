@@ -371,7 +371,7 @@ function updateSingleGasUI(type, info) {
   }
 
   if (weightStatusElem) {
-    const isShortage = weight < 800;
+    const isShortage = weight < 500;
     weightStatusElem.innerHTML = `
       <span class="gas-tag ${isShortage ? 'active-warn' : 'off'}">과부족</span>
       <span class="gas-tag ${!isShortage ? 'active-ok' : 'off'}">적정량</span>
