@@ -26,7 +26,7 @@ const SENSOR_CONFIG = {
 
 // 시스템 설정
 const CONFIG = {
-  API_BASE_URL: 'https://rrp-excited-selected-consider.trycloudflare.com',
+  API_BASE_URL: 'https://approve-borders-explains-luis.trycloudflare.com',
   ALARM_DURATION_SEC: 5,
   POLLING_INTERVAL_MS: 5000,
   EXCLUDED_ALERT_TYPES: ['GAS', 'COOLING', 'FREEZING']
