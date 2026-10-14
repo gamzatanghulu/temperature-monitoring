@@ -178,7 +178,7 @@ async function fetchAndProcessData() {
             const isCo2Low = (rawName === 'joa_co2' && press < 10.0);
             const isN2Low  = (rawName === 'joa_n2'  && press < 8.0);
             const isHighPress = press > 20.0;
-            const isShortage  = (weight < 800) || rawGas.status === '과부족';
+            const isShortage  = (weight < 500) || rawGas.status === '과부족';
 
             const isPressureAlert = isCo2Low || isN2Low || isHighPress || rawGas.pressureState === '저압' || rawGas.pressureState === '고압';
             
