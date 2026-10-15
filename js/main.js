@@ -849,7 +849,7 @@ async function handleExcelDownload() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `온도통합리포트_${STATE.pendingDownloadParams.startDate}_${STATE.pendingDownloadParams.endDate}.xlsx`;
+    a.download = `조흥스마트관제${STATE.pendingDownloadParams.startDate}_${STATE.pendingDownloadParams.endDate}.xlsx`;
     document.body.appendChild(a);
     a.click();
     a.remove();

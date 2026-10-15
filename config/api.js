@@ -22,28 +22,23 @@ module.exports = function (getSensorContext) {
       const rawName = names[idx];
       const cfg = SENSOR_CONFIG[rawName];
 
-      // HEAT(온열) 구역 센서이면서 온도/습도 값이 유효한 경우 체감온도 산출
       if (cfg && cfg.type === 'HEAT' && !isNaN(temp) && !isNaN(hum)) {
         return calculateFeelsLikeTemp(temp, hum);
       }
-      // 일반 센서이거나 습도 데이터가 없는 경우 기본 온도값 반환
       return !isNaN(temp) ? temp : null;
     });
 
     return {
       ...cachedData,
       feels_like_list: feelsLikeList,
-      feels_list: feelsLikeList // 구버전 프론트엔드 호환용
+      feels_list: feelsLikeList 
     };
   }
 
-  // 실시간 센서 데이터 조회 (GET)
   router.get('/sensor', (req, res) => {
     const { cachedSensorData, sensorHistory } = getSensorContext();
     const range = req.query.range || req.query.timeRange || '24h';
     const filteredHistory = getFilteredHistory(sensorHistory, range);
-    
-    // 체감온도 계산 로직 반영
     const enrichedData = attachFeelsLikeData(cachedSensorData);
 
     res.json({ 
@@ -53,13 +48,10 @@ module.exports = function (getSensorContext) {
     });
   });
 
-  // 실시간 센서 데이터 조회 (POST)
   router.post('/sensor', (req, res) => {
     const { cachedSensorData, sensorHistory } = getSensorContext();
     const range = req.body.range || req.query.range || '24h';
     const filteredHistory = getFilteredHistory(sensorHistory, range);
-
-    // 체감온도 계산 로직 반영
     const enrichedData = attachFeelsLikeData(cachedSensorData);
 
     res.json({ 
@@ -69,7 +61,6 @@ module.exports = function (getSensorContext) {
     });
   });
 
-  // 알림 메일 수동 발송 테스트
   router.post('/send-email', async (req, res) => {
     try {
       const { alertItems, isTest } = req.body;
@@ -85,7 +76,7 @@ module.exports = function (getSensorContext) {
     }
   });
 
-  // 엑셀 다운로드 처리 (체감온도 수식 일관성 적용)
+  // 엑셀 다운로드 처리 (출근 시간 오전 8시 30분 기준 집계 및 충전 구간 필터링 적용)
   router.get('/excel-download', async (req, res) => {
     let conn;
     try {
@@ -93,37 +84,46 @@ module.exports = function (getSensorContext) {
 
       conn = await oracledb.getConnection();
       
-      let timeGroupFormat = 'YYYY-MM-DD'; 
-      if (type === '2') timeGroupFormat = 'YYYY-MM-DD HH24'; 
-      else if (type === '3') timeGroupFormat = 'YYYY-MM-DD HH24:MI'; 
+      let timeGroupExpr = '';
+      
+      if (type === '1') {
+        // 💡 [핵심 개선] 일일 집계(type 1)인 경우, 자정(00:00) 기준이 아니라 
+        // 회사 업무 시작 시간인 '오전 8시 30분'을 하루의 경계 기준(시프트)으로 삼아 날짜를 그룹화합니다.
+        // COLLECTED_AT에서 8시간 30분(8.5/24일)을 뺀 시점을 기준으로 날짜를 자르면 08:30 ~ 익일 08:30이 하루로 묶입니다.
+        timeGroupExpr = "TO_CHAR(COLLECTED_AT - (8.5 / 24), 'YYYY-MM-DD')";
+      } else if (type === '2') {
+        timeGroupExpr = "TO_CHAR(COLLECTED_AT, 'YYYY-MM-DD HH24')";
+      } else if (type === '3') {
+        timeGroupExpr = "TO_CHAR(COLLECTED_AT, 'YYYY-MM-DD HH24') || ':' || LPAD(FLOOR(TO_NUMBER(TO_CHAR(COLLECTED_AT, 'MI')) / 5) * 5, 2, '0')";
+      }
 
       let query = `
         SELECT SENSOR_NAME, SENSOR_TYPE, 
                ROUND(AVG(TEMPERATURE), 2) AS AVG_TEMP, 
                ROUND(AVG(HUMIDITY), 2) AS AVG_HUM, 
-               ROUND(AVG(FEELS_LIKE), 2) AS AVG_FEELS,
+               CASE 
+                 WHEN SENSOR_TYPE = 'GAS' THEN 
+                   ROUND(SUM(CASE WHEN FEELS_LIKE < 0 OR FEELS_LIKE > 500 THEN 0 ELSE FEELS_LIKE END), 2)
+                 ELSE ROUND(AVG(FEELS_LIKE), 2)
+               END AS AVG_FEELS,
+               ${timeGroupExpr} AS TIME_GROUP
+        FROM SENSOR_LOG_HISTORY
       `;
-
-      if (type === '3') {
-        query += ` TO_CHAR(COLLECTED_AT, 'YYYY-MM-DD HH24') || ':' || LPAD(FLOOR(TO_NUMBER(TO_CHAR(COLLECTED_AT, 'MI')) / 5) * 5, 2, '0') AS TIME_GROUP `;
-      } else {
-        query += ` TO_CHAR(COLLECTED_AT, '${timeGroupFormat}') AS TIME_GROUP `;
-      }
-
-      query += ` FROM SENSOR_LOG_HISTORY `;
 
       const binds = {};
       if (startDate && endDate) {
         query += ` WHERE COLLECTED_AT >= TO_DATE(:startDate, 'YYYY-MM-DD') 
-                   AND COLLECTED_AT < TO_DATE(:endDate, 'YYYY-MM-DD') + 1 `;
+                    AND COLLECTED_AT < TO_DATE(:endDate, 'YYYY-MM-DD') + 1 `;
         binds.startDate = startDate;
         binds.endDate = endDate;
       }
 
       if (type === '3') {
         query += ` GROUP BY SENSOR_NAME, SENSOR_TYPE, TO_CHAR(COLLECTED_AT, 'YYYY-MM-DD HH24'), FLOOR(TO_NUMBER(TO_CHAR(COLLECTED_AT, 'MI')) / 5) `;
+      } else if (type === '2') {
+        query += ` GROUP BY SENSOR_NAME, SENSOR_TYPE, TO_CHAR(COLLECTED_AT, 'YYYY-MM-DD HH24') `;
       } else {
-        query += ` GROUP BY SENSOR_NAME, SENSOR_TYPE, TO_CHAR(COLLECTED_AT, '${timeGroupFormat}') `;
+        query += ` GROUP BY SENSOR_NAME, SENSOR_TYPE, TO_CHAR(COLLECTED_AT - (8.5 / 24), 'YYYY-MM-DD') `;
       }
       
       query += ` ORDER BY TIME_GROUP DESC `;
@@ -162,7 +162,6 @@ module.exports = function (getSensorContext) {
           return;
         }
 
-        // 헤더 1행
         const headerRow1 = ['수집일시'];
         sensorList.forEach(s => {
           const colSpan = (s.type === 'HEAT' || s.type === 'GAS') ? 3 : 2;
@@ -173,7 +172,6 @@ module.exports = function (getSensorContext) {
         const r1 = sheet.addRow(headerRow1);
         r1.height = 26;
 
-        // 헤더 2행
         const headerRow2 = ['수집일시'];
         sensorList.forEach(s => {
           if (s.type === 'GAS') {
@@ -230,7 +228,6 @@ module.exports = function (getSensorContext) {
             const parsedTemp = (temp !== null && temp !== undefined) ? parseFloat(Number(temp).toFixed(1)) : null;
             const parsedHum = (hum !== null && hum !== undefined && !isNaN(hum)) ? parseFloat(Number(hum).toFixed(1)) : null;
 
-            // calc.js 수식을 이용하여 엑셀 리포트 내 체감온도 보완 계산
             let calculatedFeels = null;
             if (cfg.type === 'HEAT' && parsedTemp !== null && parsedHum !== null) {
               calculatedFeels = calculateFeelsLikeTemp(parsedTemp, parsedHum);
@@ -306,7 +303,7 @@ module.exports = function (getSensorContext) {
         });
       });
 
-      const typeNames = { '1': '일일집계', '2': '시간대별집계', '3': '5분단위집계' };
+      const typeNames = { '1': '일일집계(08:30기준)', '2': '시간대별집계', '3': '5분단위집계' };
       const dateStr = new Date().toISOString().slice(0, 10);
       const filename = `통합관제리포트_${typeNames[type] || '집계'}_${dateStr}.xlsx`;
       const encodedFilename = encodeURIComponent(filename);
