@@ -1,8 +1,8 @@
 module.exports = {
   HASH_KEY: process.env.HASH_KEY || '75597298595310529218112835277866',
-  //RECEIVER_TO: process.env.RECEIVER_TO || "yhlohna@choheung.co.kr",
+  RECEIVER_TO: process.env.RECEIVER_TO || "yhlohna@choheung.co.kr",
   // 쉼표(,) 구분자로 수정 완료
-  //RECEIVER_CC: process.env.RECEIVER_CC || "joker@choheung.co.kr, ohdonga@choheung.co.kr, moonflair@choheung.co.kr, hojin3131@choheung.co.kr, sh_yoon001@choheung.co.kr, su25@choheung.co.kr, yoonsook.ko@choheung.co.kr, iopen009@choheung.co.kr",
+  RECEIVER_CC: process.env.RECEIVER_CC || "joker@choheung.co.kr, ohdonga@choheung.co.kr, moonflair@choheung.co.kr, hojin3131@choheung.co.kr, sh_yoon001@choheung.co.kr, su25@choheung.co.kr, yoonsook.ko@choheung.co.kr, iopen009@choheung.co.kr",
   FETCH_INTERVAL_MS: 5 * 60 * 1000, // 5분
 
   JOA_CONFIG: {
