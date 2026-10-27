@@ -1,29 +1,3 @@
-// 센서 마스터 정보
-const SENSOR_CONFIG = {
-    '스마트온도계': { name: '공무팀', zone: '야외 현장', type: 'HEAT', min: -18.0, max: 38.0, sensorId: '6281-7088', offset: -3.0 },
-    '13room':       { name: '야외외부', zone: '야외 현장', type: 'HEAT', min: -18.0, max: 38.0, sensorId: '8629-9794', offset: -3.0 },
-    '2team1':       { name: '쿠커실', zone: '현장 온열', type: 'HEAT', min: -18.0, max: 38.0, sensorId: '7244-3574'},
-    '2team':        { name: '유화솥', zone: '현장 온열', type: 'HEAT', min: -18.0, max: 38.0, sensorId: '4289-4748'},
-    '1팀외박스실':    { name: '1팀박스실', zone: '현장 온열', type: 'PROD1', min: -18.0, max: 38.0, sensorId: '8555-3600' },
-    '슈레드실1,2라인': { name: '슈레드 1,2', zone: '현장 온열', type: 'PROD1', min: -18.0, max: 38.0, sensorId: '7084-4013', channel: 1 },
-    '슈레드실3라인':   { name: '슈레드 3', zone: '현장 온열', type: 'PROD1', min: -18.0, max: 38.0, sensorId: '7084-4013', channel: 2 },
-    '2팀천장':      { name: '2팀천장', zone: '현장 온열', type: 'PROD2', min: -18.0, max: 38.0, sensorId: '5704-7896' },
-    '골드포장실':    { name: '골드포장실', zone: '현장 온열', type: 'PROD2', min: -18.0, max: 38.0, sensorId: '9318-2714' },
-    '원료보관실':    { name: '원료보관실', zone: '현장 온열', type: 'PROD2', min: -18.0, max: 38.0, sensorId: '3848-8683', channel: 1 },
-    '소분계량실':    { name: '소분계량실', zone: '현장 온열', type: 'PROD2', min: -18.0, max: 38.0, sensorId: '3848-8683', channel: 2 },
-    '10번창고':     { name: '10번 냉동', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -12.0, sensorId: '9751-1833', channel: 2},
-    //'11번창고':     { name: '11번 냉동', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -12.0, sensorId: '9751-1833', channel: 1 },
-    '스마트센서':   { name: '12번 냉동', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -5.0, sensorId: '8433-5905', channel: 1 },
-    '2채널':       { name: '13번 냉장', zone: '외부창고', type: 'COOLING', min: 0.0, max: 5.0, sensorId: '8433-5905', channel: 2 },
-    '14번창고':     { name: '14번 냉동', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -12.0, sensorId: '4595-1501', channel: 1 },
-    '15번창고':     { name: '15번 냉장', zone: '외부창고', type: 'COOLING', min: -1.0, max: 5.0, sensorId: '4595-1501', channel: 2 },
-    'B동 냉동':     { name: 'B동 냉동', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -12.0, sensorId: '8405-9325' },
-    'B동 냉장1':    { name: 'B동 냉장1', zone: '외부창고', type: 'COOLING', min: 0.0, max: 5.0, sensorId: '2830-9035', channel: 1 },
-    'B동 냉장2':    { name: 'B동 냉장2', zone: '외부창고', type: 'COOLING', min: 0.0, max: 5.0, sensorId: '2830-9035', channel: 2 },
-    'joa_co2':      { name: '탄산 고압용기', zone: '가스 저장소', type: 'GAS' },
-    'joa_n2':       { name: '질소 고압용기', zone: '가스 저장소', type: 'GAS' }
-};
-
 // 시스템 설정
 const CONFIG = {
   API_BASE_URL: 'https://screens-series-rocks-pediatric.trycloudflare.com',
@@ -34,6 +8,7 @@ const CONFIG = {
 
 // 앱 상태 관리
 const STATE = {
+  sensorConfig: {}, // 백엔드에서 동적으로 불러올 센서 설정
   chartsMap: {},
   audioCtx: null,
   alarmIntervalId: null,
@@ -47,39 +22,31 @@ const STATE = {
   pendingDownloadParams: null
 };
 
-// 안전보건공단/기상청 표준 체감온도 단일 계산식
-function calculateFeelsLikeTempStandard(Ta, RH) {
-  const temp = parseFloat(Ta);
-  const hum = parseFloat(RH);
-
-  if (isNaN(temp) || isNaN(hum)) return Ta;
-  if (temp < 20.0) return Math.round(temp * 10) / 10;
-
-  const safeHum = Math.max(Math.min(hum, 100.0), 0.1);
-
-  const a = 17.27, b = 237.7;
-  const alpha = ((a * temp) / (b + temp)) + Math.log(safeHum / 100.0);
-  const Td = (b * alpha) / (a - alpha);
-
-  const Tw = temp * Math.atan(0.151977 * Math.sqrt(safeHum + 8.313659)) +
-             Math.atan(temp + safeHum) -
-             Math.atan(safeHum - 1.676331) +
-             0.00391838 * Math.pow(safeHum, 1.5) * Math.atan(0.023101 * safeHum) - 4.686035;
-
-  let ST = -2.653 + (0.994 * temp) + (0.0153 * Math.pow(Tw, 2)) + (0.0003 * Math.pow(Td, 2));
-  const maxDiff = 1.0 + (safeHum * 0.03);
-
-  // 상/하한선 제어
-  if (ST > temp + maxDiff) ST = temp + maxDiff;
-  else if (ST < temp - maxDiff) ST = temp - maxDiff;
-
-  return Math.round(ST * 10) / 10;
+// 서버에서 센서 설정값 가져오기
+async function fetchSensorConfig() {
+  try {
+    const response = await fetch(`${CONFIG.API_BASE_URL}/api/sensor-config`, {
+      method: 'GET',
+      headers: { 'bypass-tunnel-reminder': 'true' }
+    });
+    if (!response.ok) throw new Error(`Config fetch error: ${response.status}`);
+    const data = await response.json();
+    if (data && data.result_code === 0 && data.sensor_config) {
+      STATE.sensorConfig = data.sensor_config;
+    }
+  } catch (e) {
+    console.error("Sensor config load error:", e);
+  }
 }
 
-// 페이지 초기화
-window.onload = () => {
+// 페이지 초기화 (비동기 설정 로드 후 실행)
+window.onload = async () => {
   initDateInputs();
   autoRequestNotificationPermission();
+  
+  // 백엔드에서 설정값 먼저 가져오기
+  await fetchSensorConfig();
+
   fetchSensorData();
   setInterval(fetchSensorData, CONFIG.POLLING_INTERVAL_MS);
 
@@ -193,43 +160,28 @@ async function fetchSensorData() {
   }
 }
 
-// 센서 온도 보정(offset) 및 체감온도 덮어쓰기 처리
+// 센서 온도 보정(offset) 처리 (체감온도 계산은 서버 calc.js의 표준 공식을 신뢰하고 받아옴)
 function correction(data) {
   if (!Array.isArray(data.name_list)) return;
   if (!data.sensor_configs) data.sensor_configs = {};
-  
-  // 백엔드 전달값 무시하고 프론트엔드 체감온도 배열 새로 생성
-  data.feels_like_list = [];
 
   data.name_list.forEach((rawName, index) => {
-    const config = SENSOR_CONFIG[rawName];
+    const config = STATE.sensorConfig[rawName];
     if (!data.sensor_configs[index]) data.sensor_configs[index] = {};
 
     if (config) {
       const offsetValue = typeof config.offset === 'number' ? config.offset : 0;
 
+      // 1. 기온(data_list_1) 오프셋 보정 적용
       if (data.data_list_1 && data.data_list_1[index] !== undefined && data.data_list_1[index] !== null) {
         let val = parseFloat(data.data_list_1[index]);
         if (!isNaN(val) && val !== 0) {
-          // 1. 기온 보정
           let calibratedVal = val + offsetValue;
           data.data_list_1[index] = calibratedVal.toFixed(1);
-
-          let humVal = data.data_list_2 ? parseFloat(data.data_list_2[index]) : 0;
-
-          // 2. 화면 표시 기온(27.5℃)과 습도(41.2%) 기준으로 체감온도 강제 계산 (공단 수식 적용 -> 26.3℃)
-          let calculatedFeels = calculateFeelsLikeTempStandard(calibratedVal, humVal);
-          data.feels_like_list[index] = calculatedFeels;
-
-          // 3. 경고 여부 판별
-          if (config.type === 'HEAT') {
-            data.sensor_configs[index].isWarning = calculatedFeels >= 33.0;
-          } else if (config.min !== undefined && config.max !== undefined) {
-            data.sensor_configs[index].isWarning = (calibratedVal < config.min || calibratedVal > config.max);
-          }
         }
       }
 
+      // 2. 히스토리 기온 오프셋 보정
       if (Array.isArray(data.history) && offsetValue !== 0) {
         data.history.forEach(h => {
           if (h.temps && h.temps[index] !== undefined && h.temps[index] !== null) {
@@ -242,36 +194,6 @@ function correction(data) {
       }
     }
   });
-
-  // 경고 팝업용 리스트 재평가
-  if (Array.isArray(data.alert_items)) {
-    data.alert_items = data.alert_items.filter(item => {
-      const targetKey = item.rawName || Object.keys(SENSOR_CONFIG).find(key => SENSOR_CONFIG[key].name === item.displayName);
-      const targetConfig = targetKey ? SENSOR_CONFIG[targetKey] : null;
-
-      if (targetConfig) {
-        const offsetVal = typeof targetConfig.offset === 'number' ? targetConfig.offset : 0;
-        let alertVal = parseFloat(item.temp);
-        
-        if (!isNaN(alertVal)) {
-          let calibratedVal = alertVal + offsetVal;
-          item.temp = calibratedVal.toFixed(1);
-
-          if (targetConfig.type === 'HEAT') {
-            const humVal = parseFloat(item.hum || 0);
-            const feelsVal = calculateFeelsLikeTempStandard(calibratedVal, humVal);
-            item.feelsLike = feelsVal;
-            if (feelsVal < 33.0) return false;
-          } else if (targetConfig.min !== undefined && targetConfig.max !== undefined) {
-            if (calibratedVal >= targetConfig.min && calibratedVal <= targetConfig.max) {
-              return false;
-            }
-          }
-        }
-      }
-      return true;
-    });
-  }
 }
 
 function getHeatLevel(tempVal) {
@@ -290,7 +212,7 @@ function renderDashboard(data) {
 
   if (Array.isArray(data.name_list)) {
     data.name_list.forEach((rawName, index) => {
-      const mappedConfig = SENSOR_CONFIG[rawName];
+      const mappedConfig = STATE.sensorConfig[rawName];
       const apiConfig = (data.sensor_configs && data.sensor_configs[index]) || {};
 
       const cfg = {
@@ -309,6 +231,7 @@ function renderDashboard(data) {
       if (isNaN(temp) || temp === 0) temp = null;
       if (isNaN(hum) || hum === 0) hum = null;
 
+      // 서버에서 계산되어 넘어온 feels_like_list 사용 (없으면 기온 대체)
       let feelsLike = null;
       if (data.feels_like_list && data.feels_like_list[index] !== undefined && data.feels_like_list[index] !== null) {
         feelsLike = parseFloat(data.feels_like_list[index]);
@@ -741,7 +664,7 @@ function showAlertBanner(items) {
 }
 
 function closeAlert() {
-  STATE.currentAlertKeys.forEach(key => STATE.dismissedAlertKeys.add(key));
+  STATE.currentAlertKeys.keys().forEach(key => STATE.dismissedAlertKeys.add(key)); // 안전한 순회 보완
   const banner = document.getElementById('alert-banner');
   if (banner) banner.classList.remove('active');
   acknowledgeAndStopSound();
@@ -845,8 +768,9 @@ async function handleExcelDownload() {
     });
     if (!response.ok) throw new Error('Download failed');
 
-    const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
+    const blob = `blob`;
+    // 기존 blob 다운로드 로직 유지
+    const url = window.URL.createObjectURL(await response.blob());
     const a = document.createElement('a');
     a.href = url;
     a.download = `조흥GF스마트관제${STATE.pendingDownloadParams.startDate}_${STATE.pendingDownloadParams.endDate}.xlsx`;

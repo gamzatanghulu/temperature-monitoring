@@ -116,7 +116,6 @@ function getViolationReasonsListHtml(item, emailType) {
 
 // 관제 알림 이메일 발송 함수
 async function sendEmailNotification({ items = [], emailType = 'ALERT', isTest = false, targetEmail = null }) {
-  // ── [추가된 부분] -273도 등 통신 에러로 인한 비정상 측정값 사전 필터링 ──
   if (Array.isArray(items)) {
     items = items.filter(item => {
       const val = parseFloat(item.temp);
@@ -128,12 +127,10 @@ async function sendEmailNotification({ items = [], emailType = 'ALERT', isTest =
     });
   }
 
-  // 필터링 후 알림 보낼 항목이 없으면 발송 중단 (테스트 제외)
   if (!isTest && emailType === 'ALERT' && (!items || items.length === 0)) {
     console.log('[관제 시스템] 유효한 경고 항목이 없어 이메일 발송을 취소합니다.');
     return false;
   }
-  // -----------------------------------------------------------------
 
   const nowStr = new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
   const subject = generateSubject(items, isTest, emailType);
@@ -144,7 +141,6 @@ async function sendEmailNotification({ items = [], emailType = 'ALERT', isTest =
   const headerBadgeBg = isRecovery ? '#dcfce7' : '#ffffff';
   const headerBadgeColor = isRecovery ? '#15803d' : '#dc2626';
 
-  // 카드형 아이템 리스트 HTML 생성
   const cardsHtml = isTest 
     ? `
       <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 16px;">
@@ -175,13 +171,11 @@ async function sendEmailNotification({ items = [], emailType = 'ALERT', isTest =
               </tr>
             </table>
 
-            <!-- 현재 측정치 요약 박스 -->
             <div style="background-color: #f8fafc; border-radius: 8px; padding: 12px 16px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center;">
               <span style="font-size: 12px; color: #64748b; font-weight: 600;">현재 측정치</span>
               <span style="font-size: 15px; font-weight: 800; color: ${themeColor}; font-family: 'Consolas', monospace;">${valDisplay}</span>
             </div>
 
-            <!-- 상세 원인 및 사유 목록 -->
             <div>
               <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px;">상세 발생 원인 및 사유</div>
               ${getViolationReasonsListHtml(item, emailType)}
@@ -233,7 +227,6 @@ async function sendEmailNotification({ items = [], emailType = 'ALERT', isTest =
                     </tr>
                 </table>
 
-                <!-- 카드형 장애 항목 리스트 -->
                 <div>
                     ${cardsHtml}
                 </div>

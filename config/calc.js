@@ -22,13 +22,11 @@ function calculateFeelsLikeTemp(Ta, RH) {
   const Td = (b * alpha) / (a - alpha);
 
   // 3. 기상청/공단 여름철 체감온도 회귀 수식 (ST)
-  // 기존 수식의 삼각함수 누적 오차를 잡는 공단 기상특보 검증식
   let ST = -2.653 + (0.994 * temp) + (0.0153 * Math.pow(Tw, 2)) + (0.0003 * Math.pow(Td, 2));
 
-  // 4. 습도가 low(50% 미만)일 때 기온보다 체감온도가 낮아지도록 보정 제한
+  // 4. 습도가 50% 미만일 때 건조 보정 적용
   const maxDiff = 1.0 + (safeHum * 0.03);
 
-  // 공단 알고리즘: 습도 50% 미만 건조 시 기온 감산 보정 적용
   if (safeHum < 50.0) {
     const humidityDiscount = (50.0 - safeHum) * 0.06; // 습도 감소에 따른 감산 가중치
     ST = ST - humidityDiscount;

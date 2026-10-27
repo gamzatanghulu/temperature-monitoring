@@ -47,6 +47,14 @@ let cachedSensorData = {
   updated_at: null
 };
 
+// 프론트엔드에서 단일화된 센서 설정을 가져갈 수 있도록 API 제공
+app.get('/api/sensor-config', (req, res) => {
+  res.json({
+    result_code: 0,
+    sensor_config: SENSOR_CONFIG
+  });
+});
+
 // API 라우트 주입
 app.use('/api', createApiRouter(() => ({ cachedSensorData, sensorHistory })));
 
@@ -74,18 +82,16 @@ async function fetchAndProcessData() {
     if (data && data.result_code === 0 && Array.isArray(data.name_list)) {
       const apiDataMap = {};
       
-      // cpSensor 응답 맵 구성 (여기서 -273도 등 비정상 통신 에러 값 필터링 적용)
       data.name_list.forEach((rawName, index) => {
         let temp = parseFloat(data.data_list_1[index]);
         let hum = (data.data_list_2 && data.data_list_2[index] !== undefined) 
           ? parseFloat(data.data_list_2[index]) : 0;
 
-        // ── [추가된 부분] 통신 끊김 등으로 인한 -273도 등 비정상 측정값 무시 (직전 정상값 유지 혹은 null 처리) ──
+        // 통신 끊김 등으로 인한 -273도 등 비정상 측정값 무시 (null 처리)
         if (isNaN(temp) || temp < -100) {
           console.warn(`[관제 시스템] 비정상 센서 데이터 감지 무시 (${rawName}): ${temp}℃`);
-          temp = null; // 비정상 값이면 null 처리하여 오작동 방지
+          temp = null;
         }
-        // -----------------------------------------------------------------------------------------
 
         apiDataMap[rawName] = { temp, hum };
       });
@@ -153,24 +159,25 @@ async function fetchAndProcessData() {
         const cfg = SENSOR_CONFIG[rawName];
         const sensorApiData = apiDataMap[rawName];
 
-        const temp = (sensorApiData && !isNaN(sensorApiData.temp)) ? sensorApiData.temp : null;
+        let rawTemp = (sensorApiData && !isNaN(sensorApiData.temp)) ? sensorApiData.temp : null;
         const hum = (sensorApiData && !isNaN(sensorApiData.hum)) ? sensorApiData.hum : null;
         
+        // ── [보완] 서버 센서 설정에 offset이 있다면 기온에 선반영 ──
+        const offsetVal = (cfg && typeof cfg.offset === 'number') ? cfg.offset : 0;
+        let temp = (rawTemp !== null) ? parseFloat((rawTemp + offsetVal).toFixed(1)) : null;
+        // -------------------------------------------------------------
+
         let feelsLike = temp;
         
-        // 체감온도 및 특수 데이터 처리
+        // 체감온도 및 특수 데이터 처리 (보정된 기온 기준 공단 공식 적용)
         if (cfg.type === 'HEAT' && temp !== null && hum !== null) {
           feelsLike = calculateFeelsLikeTemp(temp, hum);
         } else if (cfg.type === 'GAS') {
           feelsLike = (sensorApiData && sensorApiData.feelsLike !== undefined) ? sensorApiData.feelsLike : 0;
         }
 
-        // ----------------------------------------------------
-        // [경보 조건 판단 로직]
-        // ----------------------------------------------------
         let isCurrentlyWarning = false;
 
-        // 만약 센서 값이 null(즉, -273도 등으로 필터링되어 날아간 경우)이면 경보에서 당연히 제외
         if (temp === null && cfg.type !== 'GAS') {
           isCurrentlyWarning = false;
         } else if (cfg.type === 'FREEZING' || cfg.type === 'COOLING') {
@@ -214,25 +221,21 @@ async function fetchAndProcessData() {
           max: cfg.max 
         };
 
-        // 메일 발송 허용 조건 체크 (평일 전체 허용 / 주말은 가스(GAS)만 허용)
         const isMailAllowed = !isWeekend || (isWeekend && cfg.type === 'GAS');
 
-        // 경보 발생 및 복구 상태 감지
         if (isCurrentlyWarning) {
           sensorStateMap[rawName] = 'WARNING';
           alertItems.push(itemObj);
 
           if (isMailAllowed) {
             const lastEmailedDate = lastEmailedDateMap[rawName];
-            // 당일(todayStr)에 이미 경보 메일을 보낸 적이 없다면 최초 1회만 발송
             if (lastEmailedDate !== todayStr) {
               newlyAlertedItems.push(itemObj);
-              lastEmailedDateMap[rawName] = todayStr; // 오늘 날짜 기록
+              lastEmailedDateMap[rawName] = todayStr;
               console.warn(`[경보 발생 메일 대상] ${cfg.name}`);
             }
           }
         } else {
-          // 경보(WARNING)에서 정상(NORMAL) 상태로 복귀했을 때
           if (previousState === 'WARNING') {
             sensorStateMap[rawName] = 'NORMAL';
 
@@ -249,7 +252,6 @@ async function fetchAndProcessData() {
         feelsLikeTemps.push(feelsLike);
         sensorConfigs.push({ ...cfg, rawName, isWarning: isCurrentlyWarning });
 
-        // DB 저장용 배열 구성 (값이 null이 아닐 때만 저장)
         if (temp !== null) {
           itemsToSaveDb.push({ 
             rawName, 
@@ -262,7 +264,6 @@ async function fetchAndProcessData() {
         }
       });
 
-      // 오라클 DB 저장
       if (itemsToSaveDb.length > 0) {
         try {
           await saveSensorDataToOracle(itemsToSaveDb);
@@ -292,7 +293,6 @@ async function fetchAndProcessData() {
       sensorHistory.push({ time: currentTime, temps: filteredTemps, hums: filteredHums, feelsLikes: feelsLikeTemps });
       if (sensorHistory.length > 288) sensorHistory.shift();
 
-      // 알림 메일 발송 (경보 건 및 복구 건 구분)
       if (newlyAlertedItems.length > 0) {
         await sendEmailNotification({ items: newlyAlertedItems, emailType: 'ALERT' });
       }

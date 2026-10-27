@@ -76,7 +76,7 @@ module.exports = function (getSensorContext) {
     }
   });
 
-  // 엑셀 다운로드 처리 (출근 시간 오전 8시 30분 기준 집계 및 충전 구간 필터링 적용)
+  // 엑셀 다운로드 처리 (출근 시간 오전 8시 30분 기준 집계)
   router.get('/excel-download', async (req, res) => {
     let conn;
     try {
@@ -87,9 +87,7 @@ module.exports = function (getSensorContext) {
       let timeGroupExpr = '';
       
       if (type === '1') {
-        // 💡 [핵심 개선] 일일 집계(type 1)인 경우, 자정(00:00) 기준이 아니라 
-        // 회사 업무 시작 시간인 '오전 8시 30분'을 하루의 경계 기준(시프트)으로 삼아 날짜를 그룹화합니다.
-        // COLLECTED_AT에서 8시간 30분(8.5/24일)을 뺀 시점을 기준으로 날짜를 자르면 08:30 ~ 익일 08:30이 하루로 묶입니다.
+        // 오전 8시 30분을 기준으로 하루를 구분 (08:30 ~ 익일 08:30)
         timeGroupExpr = "TO_CHAR(COLLECTED_AT - (8.5 / 24), 'YYYY-MM-DD')";
       } else if (type === '2') {
         timeGroupExpr = "TO_CHAR(COLLECTED_AT, 'YYYY-MM-DD HH24')";
