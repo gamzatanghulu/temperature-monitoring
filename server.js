@@ -74,11 +74,19 @@ async function fetchAndProcessData() {
     if (data && data.result_code === 0 && Array.isArray(data.name_list)) {
       const apiDataMap = {};
       
-      // cpSensor 응답 맵 구성
+      // cpSensor 응답 맵 구성 (여기서 -273도 등 비정상 통신 에러 값 필터링 적용)
       data.name_list.forEach((rawName, index) => {
-        const temp = parseFloat(data.data_list_1[index]);
-        const hum = (data.data_list_2 && data.data_list_2[index] !== undefined) 
+        let temp = parseFloat(data.data_list_1[index]);
+        let hum = (data.data_list_2 && data.data_list_2[index] !== undefined) 
           ? parseFloat(data.data_list_2[index]) : 0;
+
+        // ── [추가된 부분] 통신 끊김 등으로 인한 -273도 등 비정상 측정값 무시 (직전 정상값 유지 혹은 null 처리) ──
+        if (isNaN(temp) || temp < -100) {
+          console.warn(`[관제 시스템] 비정상 센서 데이터 감지 무시 (${rawName}): ${temp}℃`);
+          temp = null; // 비정상 값이면 null 처리하여 오작동 방지
+        }
+        // -----------------------------------------------------------------------------------------
+
         apiDataMap[rawName] = { temp, hum };
       });
 
@@ -162,7 +170,10 @@ async function fetchAndProcessData() {
         // ----------------------------------------------------
         let isCurrentlyWarning = false;
 
-        if (cfg.type === 'FREEZING' || cfg.type === 'COOLING') {
+        // 만약 센서 값이 null(즉, -273도 등으로 필터링되어 날아간 경우)이면 경보에서 당연히 제외
+        if (temp === null && cfg.type !== 'GAS') {
+          isCurrentlyWarning = false;
+        } else if (cfg.type === 'FREEZING' || cfg.type === 'COOLING') {
           isCurrentlyWarning = false;
         } else if (cfg.type === 'HEAT') {
           const targetFeelsLike = feelsLike ?? temp;
@@ -225,8 +236,6 @@ async function fetchAndProcessData() {
           if (previousState === 'WARNING') {
             sensorStateMap[rawName] = 'NORMAL';
 
-            // 당일 경보 기록(lastEmailedDateMap)은 삭제하지 않고 유지합니다.
-            // 따라서 오늘 아무리 복구 후 경보가 재발생해도 경보 메일은 다시 나가지 않습니다.
             if (isMailAllowed) {
               newlyRecoveredItems.push(itemObj);
               console.log(`[복구 메일 대상] ${cfg.name}`);
@@ -240,7 +249,7 @@ async function fetchAndProcessData() {
         feelsLikeTemps.push(feelsLike);
         sensorConfigs.push({ ...cfg, rawName, isWarning: isCurrentlyWarning });
 
-        // DB 저장용 배열 구성
+        // DB 저장용 배열 구성 (값이 null이 아닐 때만 저장)
         if (temp !== null) {
           itemsToSaveDb.push({ 
             rawName, 

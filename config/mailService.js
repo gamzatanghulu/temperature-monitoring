@@ -116,6 +116,25 @@ function getViolationReasonsListHtml(item, emailType) {
 
 // 관제 알림 이메일 발송 함수
 async function sendEmailNotification({ items = [], emailType = 'ALERT', isTest = false, targetEmail = null }) {
+  // ── [추가된 부분] -273도 등 통신 에러로 인한 비정상 측정값 사전 필터링 ──
+  if (Array.isArray(items)) {
+    items = items.filter(item => {
+      const val = parseFloat(item.temp);
+      if (isNaN(val) || val < -100) {
+        console.warn(`[관제 시스템] 비정상 센서 데이터(-273℃ 등 통신 오류) 감지로 인해 메일 발송 대상에서 제외함:`, item);
+        return false;
+      }
+      return true;
+    });
+  }
+
+  // 필터링 후 알림 보낼 항목이 없으면 발송 중단 (테스트 제외)
+  if (!isTest && emailType === 'ALERT' && (!items || items.length === 0)) {
+    console.log('[관제 시스템] 유효한 경고 항목이 없어 이메일 발송을 취소합니다.');
+    return false;
+  }
+  // -----------------------------------------------------------------
+
   const nowStr = new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
   const subject = generateSubject(items, isTest, emailType);
   const isRecovery = (emailType === 'RECOVERY');
@@ -254,37 +273,3 @@ async function sendEmailNotification({ items = [], emailType = 'ALERT', isTest =
 }
 
 module.exports = { sendEmailNotification };
-
-// ----------------------------------------------------
-// [1회성 테스트 실행용 코드]
-// ----------------------------------------------------
-// async function testToJoker() {
-//   console.log('joker@choheung.co.kr 주소로 최종 제목 테스트 발송 중...');
-
-//   const mockAlertItems = [
-//     {
-//       rawName: '1팀외박스실',
-//       displayName: '1팀박스실',
-//       zone: '현장 온열',
-//       type: 'PROD1',
-//       temp: 39.2,
-//       hum: 68.0,
-//       min: -18.0,
-//       max: 38.0
-//     }
-//   ];
-
-//   try {
-//     await sendEmailNotification({
-//       items: mockAlertItems,
-//       emailType: 'ALERT',
-//       isTest: false,
-//       targetEmail: 'joker@choheung.co.kr'
-//     });
-//     console.log('✅ 발송 성공! joker@choheung.co.kr 수신함에서 새 제목을 확인해 보세요.');
-//   } catch (err) {
-//     console.error('❌ 발송 실패:', err.message);
-//   }
-// }
-
-// testToJoker();
