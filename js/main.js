@@ -1,6 +1,6 @@
 // 시스템 설정
 const CONFIG = {
-  API_BASE_URL: 'https://screens-series-rocks-pediatric.trycloudflare.com',
+  API_BASE_URL: 'https://rest-imagination-everyday-rep.trycloudflare.com',
   ALARM_DURATION_SEC: 5,
   POLLING_INTERVAL_MS: 5000,
   EXCLUDED_ALERT_TYPES: ['GAS', 'COOLING', 'FREEZING']
