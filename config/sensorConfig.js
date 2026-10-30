@@ -12,8 +12,8 @@ module.exports = {
   },
 
   SENSOR_CONFIG: {
-    '스마트온도계': { name: '공무팀', zone: '야외 현장', type: 'HEAT', min: -18.0, max: 38.0, sensorId: '6281-7088', offset: -3.0 },
-    '13room':       { name: '야외외부', zone: '야외 현장', type: 'HEAT', min: -18.0, max: 38.0, sensorId: '8629-9794', offset: -3.0 },
+    '스마트온도계': { name: '공무팀', zone: '야외 현장', type: 'HEAT', min: -18.0, max: 38.0, sensorId: '6281-7088'},
+    '13room':       { name: '야외외부', zone: '야외 현장', type: 'HEAT', min: -18.0, max: 38.0, sensorId: '8629-9794'},
     '2team1':       { name: '쿠커실', zone: '현장 온열', type: 'HEAT', min: -18.0, max: 38.0, sensorId: '7244-3574'},
     '2team':        { name: '유화솥', zone: '현장 온열', type: 'HEAT', min: -18.0, max: 38.0, sensorId: '4289-4748'},
     '1팀외박스실':    { name: '1팀박스실', zone: '현장 온열', type: 'PROD1', min: -18.0, max: 38.0, sensorId: '8555-3600' },
@@ -24,7 +24,7 @@ module.exports = {
     '원료보관실':    { name: '원료보관실', zone: '현장 온열', type: 'PROD2', min: -18.0, max: 38.0, sensorId: '3848-8683', channel: 1 },
     '소분계량실':    { name: '소분계량실', zone: '현장 온열', type: 'PROD2', min: -18.0, max: 38.0, sensorId: '3848-8683', channel: 2 },
     '10번창고':     { name: '10번 냉동', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -12.0, sensorId: '9751-1833', channel: 2},
-    //'11번창고':     { name: '11번 냉동', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -12.0, sensorId: '9751-1833', channel: 1 },
+    //'11번창고':     { name: '11번 냉동', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -12.0, sensorId: '9751-1833', channel: 1, offset: -1.0 },
     '스마트센서':   { name: '12번 냉동', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -5.0, sensorId: '8433-5905', channel: 1 },
     '2채널':       { name: '13번 냉장', zone: '외부창고', type: 'COOLING', min: 0.0, max: 5.0, sensorId: '8433-5905', channel: 2 },
     '14번창고':     { name: '14번 냉동', zone: '외부창고', type: 'FREEZING', min: -25.0, max: -12.0, sensorId: '4595-1501', channel: 1 },
