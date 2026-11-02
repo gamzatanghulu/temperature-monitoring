@@ -76,7 +76,56 @@ module.exports = function (getSensorContext) {
     }
   });
 
-  // 엑셀 다운로드 처리 (출근 시간 오전 8시 30분 기준 집계)
+  // 💡 [현장 조치 내용 등록/업데이트 API]
+  // 메일 링크(focusSensor)를 타고 들어와 제출했거나 웹에서 직접 입력한 조치사항을 DB에 저장
+  router.post('/action-note', async (req, res) => {
+    let conn;
+    try {
+      const { sensorName, actionNote } = req.body;
+      if (!sensorName || !actionNote) {
+        return res.status(400).json({ success: false, message: '센서명과 조치 내용은 필수입니다.' });
+      }
+
+      conn = await oracledb.getConnection();
+      
+      // 당일 해당 센서의 가장 최근 로그 레코드에 조치 내용 반영
+      const query = `
+        UPDATE SENSOR_LOG_HISTORY 
+        SET ACTION_NOTE = :actionNote 
+        WHERE ID = (
+          SELECT MAX(ID) 
+          FROM SENSOR_LOG_HISTORY 
+          WHERE SENSOR_NAME = :sensorName 
+            AND COLLECTED_AT >= TRUNC(SYSDATE)
+        )
+      `;
+      
+      const result = await conn.execute(query, { actionNote, sensorName }, { autoCommit: true });
+      
+      if (result.rowsAffected === 0) {
+        // 당일 데이터가 없을 경우 가장 최근 데이터 1건에 대체 업데이트
+        const fallbackQuery = `
+          UPDATE SENSOR_LOG_HISTORY 
+          SET ACTION_NOTE = :actionNote 
+          WHERE ID = (
+            SELECT MAX(ID) 
+            FROM SENSOR_LOG_HISTORY 
+            WHERE SENSOR_NAME = :sensorName
+          )
+        `;
+        await conn.execute(fallbackQuery, { actionNote, sensorName }, { autoCommit: true });
+      }
+
+      res.json({ success: true, message: '조치 내역이 성공적으로 저장되었습니다.' });
+    } catch (err) {
+      console.error('조치 내역 저장 실패:', err.message);
+      res.status(500).json({ success: false, reason: err.message });
+    } finally {
+      if (conn) try { await conn.close(); } catch (e) {}
+    }
+  });
+
+  // 엑셀 다운로드 처리 (출근 시간 오전 8시 30분 기준 집계 및 최근 조치 내역 나란히 기입)
   router.get('/excel-download', async (req, res) => {
     let conn;
     try {
@@ -87,7 +136,6 @@ module.exports = function (getSensorContext) {
       let timeGroupExpr = '';
       
       if (type === '1') {
-        // 오전 8시 30분을 기준으로 하루를 구분 (08:30 ~ 익일 08:30)
         timeGroupExpr = "TO_CHAR(COLLECTED_AT - (8.5 / 24), 'YYYY-MM-DD')";
       } else if (type === '2') {
         timeGroupExpr = "TO_CHAR(COLLECTED_AT, 'YYYY-MM-DD HH24')";
@@ -104,7 +152,8 @@ module.exports = function (getSensorContext) {
                    ROUND(SUM(CASE WHEN FEELS_LIKE < 0 OR FEELS_LIKE > 500 THEN 0 ELSE FEELS_LIKE END), 2)
                  ELSE ROUND(AVG(FEELS_LIKE), 2)
                END AS AVG_FEELS,
-               ${timeGroupExpr} AS TIME_GROUP
+               ${timeGroupExpr} AS TIME_GROUP,
+               MAX(ACTION_NOTE) KEEP (DENSE_RANK LAST ORDER BY COLLECTED_AT) AS LATEST_ACTION_NOTE
         FROM SENSOR_LOG_HISTORY
       `;
 
@@ -160,9 +209,10 @@ module.exports = function (getSensorContext) {
           return;
         }
 
+        // 헤더 1행 (센서명) - 센서당 조치사항 열 포함하여 셀 병합
         const headerRow1 = ['수집일시'];
         sensorList.forEach(s => {
-          const colSpan = (s.type === 'HEAT' || s.type === 'GAS') ? 3 : 2;
+          const colSpan = (s.type === 'HEAT' || s.type === 'GAS') ? 4 : 3;
           headerRow1.push(s.name);
           for (let i = 1; i < colSpan; i++) headerRow1.push('');
         });
@@ -170,16 +220,19 @@ module.exports = function (getSensorContext) {
         const r1 = sheet.addRow(headerRow1);
         r1.height = 26;
 
+        // 헤더 2행 (측정 항목 및 조치사항 세부 컬럼)
         const headerRow2 = ['수집일시'];
         sensorList.forEach(s => {
           if (s.type === 'GAS') {
             headerRow2.push('잔량(kg)');
             headerRow2.push('압력(bar)');
             headerRow2.push('사용량(kg)');
+            headerRow2.push('조치사항');
           } else {
             headerRow2.push('온도(℃)');
             headerRow2.push('습도(%)');
             if (s.type === 'HEAT') headerRow2.push('체감온도(℃)');
+            headerRow2.push('조치사항');
           }
         });
 
@@ -190,7 +243,7 @@ module.exports = function (getSensorContext) {
 
         let colIdx = 2;
         sensorList.forEach(s => {
-          const colSpan = (s.type === 'HEAT' || s.type === 'GAS') ? 3 : 2;
+          const colSpan = (s.type === 'HEAT' || s.type === 'GAS') ? 4 : 3;
           if (colSpan > 1) {
             sheet.mergeCells(1, colIdx, 1, colIdx + colSpan - 1);
           }
@@ -209,7 +262,7 @@ module.exports = function (getSensorContext) {
         const timeMap = {};
         if (result.rows && result.rows.length > 0) {
           result.rows.forEach(row => {
-            const [sensorName, sensorType, temp, hum, feels, timeGroup] = row;
+            const [sensorName, sensorType, temp, hum, feels, timeGroup, actionNote] = row;
             const matchedRawKey = Object.keys(SENSOR_CONFIG).find(
               k => k === sensorName || SENSOR_CONFIG[k].name === sensorName
             );
@@ -236,7 +289,8 @@ module.exports = function (getSensorContext) {
             timeMap[displayTs][matchedRawKey] = {
               temp: parsedTemp !== null ? parsedTemp : '',
               hum: parsedHum !== null ? parsedHum : '',
-              feels: calculatedFeels !== null ? calculatedFeels : ''
+              feels: calculatedFeels !== null ? calculatedFeels : '',
+              actionNote: actionNote || ''
             };
           });
         }
@@ -247,20 +301,23 @@ module.exports = function (getSensorContext) {
 
         sensorList.forEach(s => {
           if (s.type === 'GAS') {
-            sheet.getColumn(currentColIndex).width = 13;
-            sheet.getColumn(currentColIndex + 1).width = 13;
-            sheet.getColumn(currentColIndex + 2).width = 13;
-            highlightColIndices.add(currentColIndex + 2);
-            currentColIndex += 3;
-          } else {
             sheet.getColumn(currentColIndex).width = 12;
             sheet.getColumn(currentColIndex + 1).width = 12;
+            sheet.getColumn(currentColIndex + 2).width = 12;
+            sheet.getColumn(currentColIndex + 3).width = 20; // 조치사항 열 너비
+            highlightColIndices.add(currentColIndex + 2);
+            currentColIndex += 4;
+          } else {
+            sheet.getColumn(currentColIndex).width = 11;
+            sheet.getColumn(currentColIndex + 1).width = 11;
             if (s.type === 'HEAT') {
-              sheet.getColumn(currentColIndex + 2).width = 14;
+              sheet.getColumn(currentColIndex + 2).width = 13;
+              sheet.getColumn(currentColIndex + 3).width = 20; // 조치사항 열 너비
               highlightColIndices.add(currentColIndex + 2);
-              currentColIndex += 3;
+              currentColIndex += 4;
             } else {
-              currentColIndex += 2;
+              sheet.getColumn(currentColIndex + 2).width = 20; // 조치사항 열 너비
+              currentColIndex += 3;
             }
           }
         });
@@ -277,12 +334,14 @@ module.exports = function (getSensorContext) {
               if (s.type === 'HEAT' || s.type === 'GAS') {
                 rowVal.push(item.feels);
               }
+              rowVal.push(item.actionNote);
             } else {
               rowVal.push('');
               rowVal.push('');
               if (s.type === 'HEAT' || s.type === 'GAS') {
                 rowVal.push('');
               }
+              rowVal.push('');
             }
           });
 

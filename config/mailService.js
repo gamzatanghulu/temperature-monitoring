@@ -114,7 +114,7 @@ function getViolationReasonsListHtml(item, emailType) {
   return reasons.length > 0 ? reasons.join('') : `<div style="color: #dc2626; font-weight: 700; font-size: 12px;">• 규격 범위를 이탈하였습니다.</div>`;
 }
 
-// 관제 알림 이메일 발송 함수
+// 관제 알림 이메일 발송 함수 (💡 메일 카드별 조치 입력 바로가기 버튼 추가)
 async function sendEmailNotification({ items = [], emailType = 'ALERT', isTest = false, targetEmail = null }) {
   if (Array.isArray(items)) {
     items = items.filter(item => {
@@ -141,6 +141,9 @@ async function sendEmailNotification({ items = [], emailType = 'ALERT', isTest =
   const headerBadgeBg = isRecovery ? '#dcfce7' : '#ffffff';
   const headerBadgeColor = isRecovery ? '#15803d' : '#dc2626';
 
+  // 관제 시스템 웹서버 터널 주소
+  const serverUrl = 'https://rest-imagination-everyday-rep.trycloudflare.com';
+
   const cardsHtml = isTest 
     ? `
       <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 16px;">
@@ -156,6 +159,9 @@ async function sendEmailNotification({ items = [], emailType = 'ALERT', isTest =
           : item.type === 'HEAT'
             ? `${item.temp}℃ (체감 ${item.feelsLike ?? item.temp}℃)`
             : `${item.temp}℃ (습도 ${item.hum}%)`;
+
+        // 각 센서별 조치 입력 페이지로 곧바로 이동하는 링크 (쿼리스트링 전달)
+        const actionLink = `${serverUrl}/?focusSensor=${encodeURIComponent(item.rawName)}`;
 
         return `
           <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
@@ -176,9 +182,15 @@ async function sendEmailNotification({ items = [], emailType = 'ALERT', isTest =
               <span style="font-size: 15px; font-weight: 800; color: ${themeColor}; font-family: 'Consolas', monospace;">${valDisplay}</span>
             </div>
 
-            <div>
+            <div style="margin-bottom: 16px;">
               <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px;">상세 발생 원인 및 사유</div>
               ${getViolationReasonsListHtml(item, emailType)}
+            </div>
+
+            <div style="text-align: right; border-top: 1px dashed #e2e8f0; padding-top: 12px;">
+              <a href="${actionLink}" target="_blank" style="display: inline-block; padding: 8px 14px; background-color: #0284c7; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 12px; font-weight: 700;">
+                🛠️ [${item.displayName}] 현장 조치 입력하기
+              </a>
             </div>
           </div>`;
       }).join('');

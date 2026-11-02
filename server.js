@@ -32,6 +32,8 @@ const axiosClient = axios.create({
 // 실시간 상태 및 발송 관리 변수
 const sensorStateMap = {}; 
 const lastEmailedDateMap = {}; // 센서별 당일 경보 메일 발송 날짜 추적 (YYYY-MM-DD)
+const sensorViolationStartMap = {}; // 센서별 이탈 시작 시각 기록 (1시간 지속 판단용)
+
 let sensorHistory = [];
 let cachedSensorData = {
   result_code: -1,
@@ -148,6 +150,7 @@ async function fetchAndProcessData() {
 
       // 현재 한국 시간 기준 날짜 및 요일 체크
       const now = new Date();
+      const currentTimeMs = now.getTime();
       const koreaTimeString = now.toLocaleString('en-US', { timeZone: 'Asia/Seoul' });
       const koreaDate = new Date(koreaTimeString);
       
@@ -162,14 +165,13 @@ async function fetchAndProcessData() {
         let rawTemp = (sensorApiData && !isNaN(sensorApiData.temp)) ? sensorApiData.temp : null;
         const hum = (sensorApiData && !isNaN(sensorApiData.hum)) ? sensorApiData.hum : null;
         
-        // ── [보완] 서버 센서 설정에 offset이 있다면 기온에 선반영 ──
+        // 서버 센서 설정에 offset이 있다면 기온에 선반영
         const offsetVal = (cfg && typeof cfg.offset === 'number') ? cfg.offset : 0;
         let temp = (rawTemp !== null) ? parseFloat((rawTemp + offsetVal).toFixed(1)) : null;
-        // -------------------------------------------------------------
 
         let feelsLike = temp;
         
-        // 체감온도 및 특수 데이터 처리 (보정된 기온 기준 공단 공식 적용)
+        // 체감온도 및 특수 데이터 처리
         if (cfg.type === 'HEAT' && temp !== null && hum !== null) {
           feelsLike = calculateFeelsLikeTemp(temp, hum);
         } else if (cfg.type === 'GAS') {
@@ -227,15 +229,29 @@ async function fetchAndProcessData() {
           sensorStateMap[rawName] = 'WARNING';
           alertItems.push(itemObj);
 
-          if (isMailAllowed) {
-            const lastEmailedDate = lastEmailedDateMap[rawName];
-            if (lastEmailedDate !== todayStr) {
-              newlyAlertedItems.push(itemObj);
-              lastEmailedDateMap[rawName] = todayStr;
-              console.warn(`[경보 발생 메일 대상] ${cfg.name}`);
+          // 이탈 상태가 시작된 시각 기록이 없으면 현재 시각 기록
+          if (!sensorViolationStartMap[rawName]) {
+            sensorViolationStartMap[rawName] = currentTimeMs;
+          }
+
+          // 이탈 지속 시간 계산 (분 단위)
+          const durationMinutes = (currentTimeMs - sensorViolationStartMap[rawName]) / (1000 * 60);
+
+          // 이탈 상태가 '60분(1시간) 이상' 연속으로 지속된 경우에만 메일 발송 대상으로 판정
+          if (durationMinutes >= 60) {
+            if (isMailAllowed) {
+              const lastEmailedDate = lastEmailedDateMap[rawName];
+              if (lastEmailedDate !== todayStr) {
+                newlyAlertedItems.push(itemObj);
+                lastEmailedDateMap[rawName] = todayStr;
+                console.warn(`[1시간 지속 이탈 경보 메일] ${cfg.name} (${Math.round(durationMinutes)}분 경과)`);
+              }
             }
           }
         } else {
+          // 정상 수치로 돌아오면 이탈 시작 타이머 초기화
+          sensorViolationStartMap[rawName] = null;
+
           if (previousState === 'WARNING') {
             sensorStateMap[rawName] = 'NORMAL';
 

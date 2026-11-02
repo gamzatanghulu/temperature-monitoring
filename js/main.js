@@ -54,6 +54,81 @@ window.onload = async () => {
   if (confirmBtn) confirmBtn.addEventListener('click', handleExcelDownload);
 };
 
+// 메일의 [조치 입력하기] 링크를 통해 접속했을 때 실행되는 간편 조치 입력 모달/입력창 생성 로직
+window.addEventListener('DOMContentLoaded', () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const focusSensor = urlParams.get('focusSensor');
+  
+  if (focusSensor) {
+    // 렌더링 완료 후 조치 입력용 간편 팝업 또는 입력 폼 띄우기
+    setTimeout(() => {
+      showActionModal(focusSensor);
+    }, 1500);
+  }
+});
+
+// 메일 링크로 들어왔을 때 화면에 띄워줄 간편 조치 입력창 팝업 함수
+function showActionModal(sensorName) {
+  const config = STATE.sensorConfig[sensorName] || { name: sensorName };
+  const displayName = config.name || sensorName;
+
+  const modalHtml = `
+    <div id="mailActionModal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; z-index: 9999;">
+      <div style="background: #ffffff; padding: 24px; border-radius: 12px; width: 90%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+        <h3 style="margin-top: 0; color: #0f172a; font-size: 18px;">🛠️ 현장 조치 내용 등록</h3>
+        <p style="font-size: 13px; color: #64748b; margin-bottom: 16px;">대상 센서: <b>${displayName}</b></p>
+        <textarea id="mailActionNoteInput" placeholder="이곳에 조치 내용을 상세히 적어주세요..." style="width: 100%; height: 100px; padding: 10px; font-size: 13px; border: 1px solid #cbd5e1; border-radius: 6px; resize: none; box-sizing: border-box; margin-bottom: 16px;"></textarea>
+        <div style="display: flex; gap: 8px; justify-content: flex-end;">
+          <button onclick="closeMailActionModal()" style="padding: 8px 14px; background: #e2e8f0; color: #334155; border: none; border-radius: 6px; font-size: 13px; cursor: pointer;">취소</button>
+          <button onclick="submitMailAction('${sensorName}')" style="padding: 8px 14px; background: #0284c7; color: #ffffff; border: none; border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer;">조치 내용 저장</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+function closeMailActionModal() {
+  const modal = document.getElementById('mailActionModal');
+  if (modal) modal.remove();
+  // URL 파라미터 정리
+  window.history.replaceState({}, document.title, window.location.pathname);
+}
+
+// 메일 연동 조치 내용 서버 전송
+async function submitMailAction(sensorName) {
+  const inputElem = document.getElementById('mailActionNoteInput');
+  if (!inputElem) return;
+
+  const actionNote = inputElem.value.trim();
+  if (!actionNote) {
+    alert('조치 내용을 입력해 주세요.');
+    return;
+  }
+
+  try {
+    const response = await fetch(`${CONFIG.API_BASE_URL}/api/action-note`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'bypass-tunnel-reminder': 'true'
+      },
+      body: JSON.stringify({ sensorName, actionNote })
+    });
+
+    const result = await response.json();
+    if (result.success) {
+      alert('조치 내역이 성공적으로 저장되었습니다. (엑셀 다운로드 시 반영됩니다)');
+      closeMailActionModal();
+    } else {
+      alert('저장 실패: ' + (result.message || '오류 발생'));
+    }
+  } catch (e) {
+    console.error('Action submit error:', e);
+    alert('서버 통신 중 오류가 발생했습니다.');
+  }
+}
+
 function autoRequestNotificationPermission() {
   if ("Notification" in window && Notification.permission === "default") {
     Notification.requestPermission().catch(() => {});
@@ -160,7 +235,7 @@ async function fetchSensorData() {
   }
 }
 
-// 센서 온도 보정(offset) 처리 (체감온도 계산은 서버 calc.js의 표준 공식을 신뢰하고 받아옴)
+// 센서 온도 보정(offset) 처리
 function correction(data) {
   if (!Array.isArray(data.name_list)) return;
   if (!data.sensor_configs) data.sensor_configs = {};
@@ -172,7 +247,6 @@ function correction(data) {
     if (config) {
       const offsetValue = typeof config.offset === 'number' ? config.offset : 0;
 
-      // 1. 기온(data_list_1) 오프셋 보정 적용
       if (data.data_list_1 && data.data_list_1[index] !== undefined && data.data_list_1[index] !== null) {
         let val = parseFloat(data.data_list_1[index]);
         if (!isNaN(val) && val !== 0) {
@@ -181,7 +255,6 @@ function correction(data) {
         }
       }
 
-      // 2. 히스토리 기온 오프셋 보정
       if (Array.isArray(data.history) && offsetValue !== 0) {
         data.history.forEach(h => {
           if (h.temps && h.temps[index] !== undefined && h.temps[index] !== null) {
@@ -216,6 +289,7 @@ function renderDashboard(data) {
       const apiConfig = (data.sensor_configs && data.sensor_configs[index]) || {};
 
       const cfg = {
+        rawName: rawName,
         name: mappedConfig?.name || apiConfig.name || rawName,
         zone: mappedConfig?.zone || apiConfig.zone || '기타구역',
         type: mappedConfig?.type || apiConfig.type || 'COOLING',
@@ -231,7 +305,6 @@ function renderDashboard(data) {
       if (isNaN(temp) || temp === 0) temp = null;
       if (isNaN(hum) || hum === 0) hum = null;
 
-      // 서버에서 계산되어 넘어온 feels_like_list 사용 (없으면 기온 대체)
       let feelsLike = null;
       if (data.feels_like_list && data.feels_like_list[index] !== undefined && data.feels_like_list[index] !== null) {
         feelsLike = parseFloat(data.feels_like_list[index]);
@@ -664,7 +737,7 @@ function showAlertBanner(items) {
 }
 
 function closeAlert() {
-  STATE.currentAlertKeys.keys().forEach(key => STATE.dismissedAlertKeys.add(key)); // 안전한 순회 보완
+  STATE.currentAlertKeys.forEach(key => STATE.dismissedAlertKeys.add(key));
   const banner = document.getElementById('alert-banner');
   if (banner) banner.classList.remove('active');
   acknowledgeAndStopSound();
@@ -768,12 +841,10 @@ async function handleExcelDownload() {
     });
     if (!response.ok) throw new Error('Download failed');
 
-    const blob = `blob`;
-    // 기존 blob 다운로드 로직 유지
     const url = window.URL.createObjectURL(await response.blob());
     const a = document.createElement('a');
     a.href = url;
-    a.download = `조흥GF스마트관제${STATE.pendingDownloadParams.startDate}_${STATE.pendingDownloadParams.endDate}.xlsx`;
+    a.download = `조흥GF스마트관제_${STATE.pendingDownloadParams.startDate}_${STATE.pendingDownloadParams.endDate}.xlsx`;
     document.body.appendChild(a);
     a.click();
     a.remove();
