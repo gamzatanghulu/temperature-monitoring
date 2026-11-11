@@ -565,7 +565,7 @@ html, body {
 
 /* 센서 위치 구역명 */
 .tile-zone {
-  font-size: 10px;
+  font-size: 14px;
   color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
