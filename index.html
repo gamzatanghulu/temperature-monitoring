@@ -36,9 +36,10 @@
           <input type="date" id="csv-from-date">
           <span class="date-sep">~</span>
           <input type="date" id="csv-to-date">
+          <!-- 💡 [수정] 엑셀 집계 기본값을 시간대별 집계가 먼저 오도록 순서 변경 -->
           <select id="csv-type">
-            <option value="1">일일 집계</option>
             <option value="2">시간대별 집계</option>
+            <option value="1">일일 집계(08:30기준)</option>
             <option value="3">5분 단위 집계</option>
           </select>
           <button type="button" class="btn-excel" onclick="downloadExcelModule()">엑셀 다운로드</button>

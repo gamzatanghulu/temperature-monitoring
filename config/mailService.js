@@ -2,6 +2,9 @@ const nodemailer = require('nodemailer');
 const path = require('path');
 const { RECEIVER_TO, RECEIVER_CC } = require('./sensorConfig');
 
+// 💡 경고 메일이 발송된 이력이 있는 센서들을 기록하는 메모리 상태 맵 (정상복구 메일 조건 제어용)
+const activeAlertSentTracker = new Set();
+
 // SMTP 메일 트랜스포터 설정
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || 'smtp.gmail.com',
@@ -45,7 +48,7 @@ function generateSubject(items, isTest, emailType) {
   }
 }
 
-// 장애 사유 HTML 생성 (직관적인 뱃지 형태)
+// 장애 사유 HTML 생성
 function getViolationReasonsListHtml(item, emailType) {
   if (emailType === 'RECOVERY') {
     return `<div style="background-color: #f0fdf4; color: #15803d; padding: 10px 14px; border-radius: 8px; font-size: 13px; font-weight: 700; border: 1px solid #bbf7d0;">✓ 설정된 적정 범위 내로 안전하게 복구되었습니다.</div>`;
@@ -114,17 +117,38 @@ function getViolationReasonsListHtml(item, emailType) {
   return reasons.length > 0 ? reasons.join('') : `<div style="color: #dc2626; font-weight: 700; font-size: 12px;">• 규격 범위를 이탈하였습니다.</div>`;
 }
 
-// 관제 알림 이메일 발송 함수 (💡 메일 카드별 조치 입력 바로가기 버튼 추가)
+// 관제 알림 이메일 발송 함수
 async function sendEmailNotification({ items = [], emailType = 'ALERT', isTest = false, targetEmail = null }) {
   if (Array.isArray(items)) {
     items = items.filter(item => {
       const val = parseFloat(item.temp);
       if (isNaN(val) || val < -100) {
-        console.warn(`[관제 시스템] 비정상 센서 데이터(-273℃ 등 통신 오류) 감지로 인해 메일 발송 대상에서 제외함:`, item);
+        console.warn(`[관제 시스템] 비정상 센서 데이터 감지로 인해 메일 발송 대상에서 제외함:`, item);
         return false;
       }
       return true;
     });
+  }
+
+  const isRecovery = (emailType === 'RECOVERY');
+
+  // 💡 [핵심 수정] 정상복구 메일인 경우, 이전에 경고 메일이 실제로 발송된 적이 있는 항목들만 추려냄
+  if (!isTest && isRecovery) {
+    items = items.filter(item => {
+      const key = item.rawName || item.displayName;
+      const hasBeenAlerted = activeAlertSentTracker.has(key);
+      if (hasBeenAlerted) {
+        // 복구되었으므로 트래커에서 제거 (다음에 또 울리려면 다시 이탈해야 함)
+        activeAlertSentTracker.delete(key);
+        return true;
+      }
+      return false; // 경고 발송 이력이 없으면 복구 메일 발송 안 함!
+    });
+
+    if (items.length === 0) {
+      console.log('[관제 시스템] 경고 발송 이력이 없는 항목의 복구 건이므로 정상복구 이메일 발송을 생략합니다.');
+      return false;
+    }
   }
 
   if (!isTest && emailType === 'ALERT' && (!items || items.length === 0)) {
@@ -132,17 +156,24 @@ async function sendEmailNotification({ items = [], emailType = 'ALERT', isTest =
     return false;
   }
 
+  // 경고 메일인 경우 발송 대상 센서들을 트래커에 기록
+  if (!isTest && emailType === 'ALERT') {
+    items.forEach(item => {
+      const key = item.rawName || item.displayName;
+      activeAlertSentTracker.add(key);
+    });
+  }
+
   const nowStr = new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
   const subject = generateSubject(items, isTest, emailType);
-  const isRecovery = (emailType === 'RECOVERY');
 
   const themeColor = isRecovery ? '#15803d' : '#dc2626';
   const headerBadgeText = isRecovery ? 'NORMAL RECOVERY' : 'CRITICAL ALERT';
   const headerBadgeBg = isRecovery ? '#dcfce7' : '#ffffff';
   const headerBadgeColor = isRecovery ? '#15803d' : '#dc2626';
 
-  // 관제 시스템 웹서버 터널 주소
-  const serverUrl = 'https://rest-imagination-everyday-rep.trycloudflare.com';
+  // 💡 [핵심 수정] 현재 사용 중이신 올바른 클라우드플레어 터널 URL로 지정하거나 환경변수 연동
+  const serverUrl = process.env.API_BASE_URL || 'https://groove-looking-bible-loud.trycloudflare.com';
 
   const cardsHtml = isTest 
     ? `
@@ -160,7 +191,7 @@ async function sendEmailNotification({ items = [], emailType = 'ALERT', isTest =
             ? `${item.temp}℃ (체감 ${item.feelsLike ?? item.temp}℃)`
             : `${item.temp}℃ (습도 ${item.hum}%)`;
 
-        // 각 센서별 조치 입력 페이지로 곧바로 이동하는 링크 (쿼리스트링 전달)
+        // 각 센서별 조치 입력 페이지로 정확히 연결되는 링크
         const actionLink = `${serverUrl}/?focusSensor=${encodeURIComponent(item.rawName)}`;
 
         return `

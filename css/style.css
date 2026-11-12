@@ -574,7 +574,7 @@ html, body {
 
 /* 센서 명칭 */
 .tile-name {
-  font-size: 18px;
+  font-size: 16px;
   color: #ffffff;
   white-space: nowrap;
   overflow: hidden;

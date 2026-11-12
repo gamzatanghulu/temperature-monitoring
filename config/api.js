@@ -77,7 +77,6 @@ module.exports = function (getSensorContext) {
   });
 
   // 💡 [현장 조치 내용 등록/업데이트 API]
-  // 메일 링크(focusSensor)를 타고 들어와 제출했거나 웹에서 직접 입력한 조치사항을 DB에 저장
   router.post('/action-note', async (req, res) => {
     let conn;
     try {
@@ -88,7 +87,6 @@ module.exports = function (getSensorContext) {
 
       conn = await oracledb.getConnection();
       
-      // 당일 해당 센서의 가장 최근 로그 레코드에 조치 내용 반영
       const query = `
         UPDATE SENSOR_LOG_HISTORY 
         SET ACTION_NOTE = :actionNote 
@@ -103,7 +101,6 @@ module.exports = function (getSensorContext) {
       const result = await conn.execute(query, { actionNote, sensorName }, { autoCommit: true });
       
       if (result.rowsAffected === 0) {
-        // 당일 데이터가 없을 경우 가장 최근 데이터 1건에 대체 업데이트
         const fallbackQuery = `
           UPDATE SENSOR_LOG_HISTORY 
           SET ACTION_NOTE = :actionNote 
@@ -125,7 +122,7 @@ module.exports = function (getSensorContext) {
     }
   });
 
-  // 엑셀 다운로드 처리 (출근 시간 오전 8시 30분 기준 집계 및 최근 조치 내역 나란히 기입)
+  // 엑셀 다운로드 처리
   router.get('/excel-download', async (req, res) => {
     let conn;
     try {
@@ -180,13 +177,14 @@ module.exports = function (getSensorContext) {
       const workbook = new ExcelJS.Workbook();
       workbook.creator = '스마트관제시스템';
 
+      // 요청하신 순서(냉동 / 냉장 / 생산1팀 / 생산2팀 / 폭염 / 가스) 및 색상 정의
       const categorySpecs = [
-        { key: 'HEAT', title: '폭염 관제', bgColor: 'FEE2E2' },
-        { key: 'PROD1', title: '생산 1팀', bgColor: 'FFEDD5' },
-        { key: 'PROD2', title: '생산 2팀', bgColor: 'FEF3C7' },
-        { key: 'COOLING', title: '냉장 창고', bgColor: 'E0F2FE' },
-        { key: 'FREEZING', title: '냉동 창고', bgColor: 'F1F5F9' },
-        { key: 'GAS', title: '가스 용기', bgColor: 'F3E8FF' }
+        { key: 'FREEZING', title: '냉동 창고', bgColor: 'E0F2FE' }, // 연한 하늘색
+        { key: 'COOLING',  title: '냉장 창고', bgColor: 'FFEDD5' }, // 연한 살구/주황색
+        { key: 'PROD1',    title: '생산 1팀',  bgColor: 'DCFCE7' }, // 연한 연두색
+        { key: 'PROD2',    title: '생산 2팀',  bgColor: 'FEF3C7' }, // 연한 노란색
+        { key: 'HEAT',     title: '폭염 관제', bgColor: 'FEE2E2' }, // 연한 빨간색
+        { key: 'GAS',      title: '가스 용기', bgColor: 'F3E8FF' }  // 연한 보라색
       ];
 
       const thinBorder = {
@@ -198,6 +196,195 @@ module.exports = function (getSensorContext) {
 
       const activeSensorNames = Object.keys(SENSOR_CONFIG);
 
+      // 전체 조회 데이터를 시간대별로 미리 정리 (모든 시트에서 재사용)
+      const globalTimeMap = {};
+      if (result.rows && result.rows.length > 0) {
+        result.rows.forEach(row => {
+          const [sensorName, sensorType, temp, hum, feels, timeGroup, actionNote] = row;
+          const matchedRawKey = activeSensorNames.find(
+            k => k === sensorName || SENSOR_CONFIG[k].name === sensorName
+          );
+
+          if (!matchedRawKey) return;
+          const cfg = SENSOR_CONFIG[matchedRawKey];
+          if (!cfg) return;
+
+          let displayTs = timeGroup;
+          if (type === '2') displayTs = timeGroup + ':00';
+
+          if (!globalTimeMap[displayTs]) globalTimeMap[displayTs] = {};
+
+          const parsedTemp = (temp !== null && temp !== undefined) ? parseFloat(Number(temp).toFixed(1)) : null;
+          const parsedHum = (hum !== null && hum !== undefined && !isNaN(hum)) ? parseFloat(Number(hum).toFixed(1)) : null;
+
+          let calculatedFeels = null;
+          if (cfg.type === 'HEAT' && parsedTemp !== null && parsedHum !== null) {
+            calculatedFeels = calculateFeelsLikeTemp(parsedTemp, parsedHum);
+          } else if (feels !== null && feels !== undefined && !isNaN(feels)) {
+            calculatedFeels = parseFloat(Number(feels).toFixed(1));
+          }
+
+          globalTimeMap[displayTs][matchedRawKey] = {
+            temp: parsedTemp !== null ? parsedTemp : '',
+            hum: parsedHum !== null ? parsedHum : '',
+            feels: calculatedFeels !== null ? calculatedFeels : '',
+            actionNote: actionNote || ''
+          };
+        });
+      }
+
+      const sortedTimeKeys = Object.keys(globalTimeMap).sort().reverse();
+
+      // =========================================================================
+      // 1. 첫 번째 시트: 전체 모니터링 (습도 제거, 냉동/냉장 등 긴 이름을 위해 너비 +3pt 확대)
+      // =========================================================================
+      const summarySheet = workbook.addWorksheet('전체 모니터링');
+      
+      const categoryGroups = [];
+      categorySpecs.forEach(cat => {
+        const sensorsInCat = activeSensorNames
+          .filter(name => SENSOR_CONFIG[name].type === cat.key)
+          .map(name => ({ rawName: name, ...SENSOR_CONFIG[name] }));
+        
+        if (sensorsInCat.length > 0) {
+          categoryGroups.push({
+            title: cat.title,
+            bgColor: cat.bgColor,
+            sensors: sensorsInCat
+          });
+        }
+      });
+
+      if (categoryGroups.length === 0) {
+        summarySheet.addRow(['등록된 데이터가 없습니다.']);
+      } else {
+        const sHeader1 = ['수집일시']; // 1행: 구역명
+        const sHeader2 = ['수집일시']; // 2행: 센서 상세명 (name) - 긴 이름 대응 너비 확대
+        const sHeader3 = ['수집일시']; // 3행: 측정 항목
+        
+        const colColorMap = { 1: 'E2E8F0' };
+        const summaryHighlightCols = new Set();
+
+        let sColIdx = 2;
+        categoryGroups.forEach(group => {
+          group.sensors.forEach(s => {
+            let colSpan = 1;
+            if (s.type === 'GAS') {
+              colSpan = 3;
+            } else {
+              colSpan = 1; // 일반 및 폭염 모두 1열
+            }
+
+            sHeader1.push(group.title);
+            for (let i = 1; i < colSpan; i++) sHeader1.push('');
+
+            sHeader2.push(s.name);
+            for (let i = 1; i < colSpan; i++) sHeader2.push('');
+
+            if (s.type === 'GAS') {
+              sHeader3.push('잔량(kg)', '압력(bar)', '사용량(kg)');
+              summaryHighlightCols.add(sColIdx + 2);
+            } else if (s.type === 'HEAT') {
+              sHeader3.push('체감온도(℃)');
+              summaryHighlightCols.add(sColIdx);
+            } else {
+              sHeader3.push('온도(℃)');
+            }
+
+            // 기존 12에서 약 3포인트 넓힌 15로 설정 (냉동/냉장 등 긴 이름 수용)
+            const columnWidth = (s.type === 'GAS') ? 13 : 15;
+
+            for (let i = 0; i < colSpan; i++) {
+              colColorMap[sColIdx + i] = group.bgColor;
+              summarySheet.getColumn(sColIdx + i).width = columnWidth;
+            }
+
+            sColIdx += colSpan;
+          });
+        });
+
+        const sr1 = summarySheet.addRow(sHeader1);
+        const sr2 = summarySheet.addRow(sHeader2);
+        const sr3 = summarySheet.addRow(sHeader3);
+        
+        [sr1, sr2, sr3].forEach(r => r.height = 22);
+
+        summarySheet.mergeCells(1, 1, 3, 1);
+        summarySheet.getColumn(1).width = 18;
+
+        let currentMergeCol = 2;
+        categoryGroups.forEach(group => {
+          let groupColSpanTotal = 0;
+          group.sensors.forEach(s => {
+            const span = (s.type === 'GAS') ? 3 : 1;
+            groupColSpanTotal += span;
+
+            if (span > 1) {
+              summarySheet.mergeCells(2, currentMergeCol, 2, currentMergeCol + span - 1);
+            }
+            currentMergeCol += span;
+          });
+
+          if (groupColSpanTotal > 0) {
+            const startCol = currentMergeCol - groupColSpanTotal;
+            const endCol = currentMergeCol - 1;
+            if (startCol < endCol) {
+              summarySheet.mergeCells(1, startCol, 1, endCol);
+            }
+          }
+        });
+
+        [sr1, sr2, sr3].forEach(row => {
+          row.eachCell({ includeEmpty: true }, (cell, cNum) => {
+            const bg = colColorMap[cNum] || 'F8FAFC';
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bg } };
+            cell.font = { name: '오뚜기산스 3N Medium', size: 10, bold: true };
+            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+            cell.border = thinBorder;
+          });
+        });
+
+        sortedTimeKeys.forEach(timeKey => {
+          const rowVal = [timeKey];
+          categoryGroups.forEach(group => {
+            group.sensors.forEach(s => {
+              const item = globalTimeMap[timeKey][s.rawName];
+              if (item) {
+                if (s.type === 'GAS') {
+                  rowVal.push(item.temp, item.hum, item.feels);
+                } else if (s.type === 'HEAT') {
+                  rowVal.push(item.feels !== '' ? item.feels : item.temp);
+                } else {
+                  rowVal.push(item.temp);
+                }
+              } else {
+                if (s.type === 'GAS') {
+                  rowVal.push('', '', '');
+                } else {
+                  rowVal.push('');
+                }
+              }
+            });
+          });
+
+          const addedRow = summarySheet.addRow(rowVal);
+          addedRow.height = 22;
+
+          addedRow.eachCell({ includeEmpty: true }, (cell, cNum) => {
+            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+            cell.font = { name: '오뚜기산스 3N Medium', size: 10 };
+            cell.border = thinBorder;
+
+            if (summaryHighlightCols.has(cNum) && cell.value !== '') {
+              cell.font = { name: '오뚜기산스 3N Medium', size: 10, bold: true, color: { argb: 'DC2626' } };
+            }
+          });
+        });
+      }
+
+      // =========================================================================
+      // 2. 카테고리별 개별 시트 (기존 로직 유지)
+      // =========================================================================
       categorySpecs.forEach(cat => {
         const sheet = workbook.addWorksheet(cat.title);
         const sensorList = activeSensorNames
@@ -209,7 +396,6 @@ module.exports = function (getSensorContext) {
           return;
         }
 
-        // 헤더 1행 (센서명) - 센서당 조치사항 열 포함하여 셀 병합
         const headerRow1 = ['수집일시'];
         sensorList.forEach(s => {
           const colSpan = (s.type === 'HEAT' || s.type === 'GAS') ? 4 : 3;
@@ -220,17 +406,12 @@ module.exports = function (getSensorContext) {
         const r1 = sheet.addRow(headerRow1);
         r1.height = 26;
 
-        // 헤더 2행 (측정 항목 및 조치사항 세부 컬럼)
         const headerRow2 = ['수집일시'];
         sensorList.forEach(s => {
           if (s.type === 'GAS') {
-            headerRow2.push('잔량(kg)');
-            headerRow2.push('압력(bar)');
-            headerRow2.push('사용량(kg)');
-            headerRow2.push('조치사항');
+            headerRow2.push('잔량(kg)', '압력(bar)', '사용량(kg)', '조치사항');
           } else {
-            headerRow2.push('온도(℃)');
-            headerRow2.push('습도(%)');
+            headerRow2.push('온도(℃)', '습도(%)');
             if (s.type === 'HEAT') headerRow2.push('체감온도(℃)');
             headerRow2.push('조치사항');
           }
@@ -259,42 +440,6 @@ module.exports = function (getSensorContext) {
           });
         });
 
-        const timeMap = {};
-        if (result.rows && result.rows.length > 0) {
-          result.rows.forEach(row => {
-            const [sensorName, sensorType, temp, hum, feels, timeGroup, actionNote] = row;
-            const matchedRawKey = Object.keys(SENSOR_CONFIG).find(
-              k => k === sensorName || SENSOR_CONFIG[k].name === sensorName
-            );
-
-            if (!matchedRawKey) return;
-            const cfg = SENSOR_CONFIG[matchedRawKey];
-            if (!cfg || cfg.type !== cat.key) return;
-
-            let displayTs = timeGroup;
-            if (type === '2') displayTs = timeGroup + ':00';
-
-            if (!timeMap[displayTs]) timeMap[displayTs] = {};
-
-            const parsedTemp = (temp !== null && temp !== undefined) ? parseFloat(Number(temp).toFixed(1)) : null;
-            const parsedHum = (hum !== null && hum !== undefined && !isNaN(hum)) ? parseFloat(Number(hum).toFixed(1)) : null;
-
-            let calculatedFeels = null;
-            if (cfg.type === 'HEAT' && parsedTemp !== null && parsedHum !== null) {
-              calculatedFeels = calculateFeelsLikeTemp(parsedTemp, parsedHum);
-            } else if (feels !== null && feels !== undefined && !isNaN(feels)) {
-              calculatedFeels = parseFloat(Number(feels).toFixed(1));
-            }
-
-            timeMap[displayTs][matchedRawKey] = {
-              temp: parsedTemp !== null ? parsedTemp : '',
-              hum: parsedHum !== null ? parsedHum : '',
-              feels: calculatedFeels !== null ? calculatedFeels : '',
-              actionNote: actionNote || ''
-            };
-          });
-        }
-
         sheet.getColumn(1).width = 18;
         const highlightColIndices = new Set();
         let currentColIndex = 2;
@@ -304,7 +449,7 @@ module.exports = function (getSensorContext) {
             sheet.getColumn(currentColIndex).width = 12;
             sheet.getColumn(currentColIndex + 1).width = 12;
             sheet.getColumn(currentColIndex + 2).width = 12;
-            sheet.getColumn(currentColIndex + 3).width = 20; // 조치사항 열 너비
+            sheet.getColumn(currentColIndex + 3).width = 20;
             highlightColIndices.add(currentColIndex + 2);
             currentColIndex += 4;
           } else {
@@ -312,22 +457,20 @@ module.exports = function (getSensorContext) {
             sheet.getColumn(currentColIndex + 1).width = 11;
             if (s.type === 'HEAT') {
               sheet.getColumn(currentColIndex + 2).width = 13;
-              sheet.getColumn(currentColIndex + 3).width = 20; // 조치사항 열 너비
+              sheet.getColumn(currentColIndex + 3).width = 20;
               highlightColIndices.add(currentColIndex + 2);
               currentColIndex += 4;
             } else {
-              sheet.getColumn(currentColIndex + 2).width = 20; // 조치사항 열 너비
+              sheet.getColumn(currentColIndex + 2).width = 20;
               currentColIndex += 3;
             }
           }
         });
 
-        const sortedTimeKeys = Object.keys(timeMap).sort().reverse();
-
         sortedTimeKeys.forEach(timeKey => {
           const rowVal = [timeKey];
           sensorList.forEach(s => {
-            const item = timeMap[timeKey][s.rawName];
+            const item = globalTimeMap[timeKey][s.rawName];
             if (item) {
               rowVal.push(item.temp);
               rowVal.push(item.hum);

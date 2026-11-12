@@ -774,15 +774,16 @@ function formatTimeLabel(timeStr) {
   return parts.length < 2 ? timeStr : `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
 }
 
+// 💡 [수정] 달력 초기 기간 설정을 한 달 전에서 '일주일 전(7일)'로 변경
 function initDateInputs() {
   const today = new Date();
-  const oneMonthAgo = new Date();
-  oneMonthAgo.setMonth(today.getMonth() - 1);
+  const oneWeekAgo = new Date();
+  oneWeekAgo.setDate(today.getDate() - 7);
 
   const toDateElem = document.getElementById('csv-to-date');
   const fromDateElem = document.getElementById('csv-from-date');
   if (toDateElem) toDateElem.value = today.toISOString().split('T')[0];
-  if (fromDateElem) fromDateElem.value = oneMonthAgo.toISOString().split('T')[0];
+  if (fromDateElem) fromDateElem.value = oneWeekAgo.toISOString().split('T')[0];
 }
 
 function setSyncStatus(text, color) {
@@ -809,13 +810,13 @@ function downloadExcelModule() {
     return;
   }
 
-  const typeNames = { '1': '일일 집계', '2': '시간대별 집계', '3': '5분 단위 집계' };
+  const typeNames = { '1': '일일 집계(08:30기준)', '2': '시간대별 집계', '3': '5분 단위 집계' };
   const periodTextElem = document.getElementById('modalPeriodText');
   const typeTextElem = document.getElementById('modalTypeText');
   const modalElem = document.getElementById('customConfirmModal');
 
   if (periodTextElem) periodTextElem.innerText = `${startDate} ~ ${endDate}`;
-  if (typeTextElem) typeTextElem.innerText = typeNames[type] || '일일 집계';
+  if (typeTextElem) typeTextElem.innerText = typeNames[type] || '시간대별 집계';
 
   STATE.pendingDownloadParams = { type, startDate, endDate };
   if (modalElem) modalElem.style.display = 'flex';
