@@ -26,6 +26,7 @@ function generateSubject(items, isTest, emailType) {
   const prefix = (emailType === 'RECOVERY') ? '[정상복구]' : '[경보]';
 
   if (count > 1) {
+    // 💡 [수정 완료] 줄바꿈 및 문법 오류 수정
     return `${prefix} ${firstItem.displayName} 외 ${count - 1}건 상태 변화`;
   }
 
@@ -132,17 +133,16 @@ async function sendEmailNotification({ items = [], emailType = 'ALERT', isTest =
 
   const isRecovery = (emailType === 'RECOVERY');
 
-  // 💡 [핵심 수정] 정상복구 메일인 경우, 이전에 경고 메일이 실제로 발송된 적이 있는 항목들만 추려냄
+  // 💡 정상복구 메일인 경우, 이전에 경고 메일이 실제로 발송된 적이 있는 항목들만 추려냄
   if (!isTest && isRecovery) {
     items = items.filter(item => {
       const key = item.rawName || item.displayName;
       const hasBeenAlerted = activeAlertSentTracker.has(key);
       if (hasBeenAlerted) {
-        // 복구되었으므로 트래커에서 제거 (다음에 또 울리려면 다시 이탈해야 함)
         activeAlertSentTracker.delete(key);
         return true;
       }
-      return false; // 경고 발송 이력이 없으면 복구 메일 발송 안 함!
+      return false;
     });
 
     if (items.length === 0) {
@@ -172,7 +172,6 @@ async function sendEmailNotification({ items = [], emailType = 'ALERT', isTest =
   const headerBadgeBg = isRecovery ? '#dcfce7' : '#ffffff';
   const headerBadgeColor = isRecovery ? '#15803d' : '#dc2626';
 
-  // 💡 [핵심 수정] 현재 사용 중이신 올바른 클라우드플레어 터널 URL로 지정하거나 환경변수 연동
   const serverUrl = process.env.API_BASE_URL || 'https://groove-looking-bible-loud.trycloudflare.com';
 
   const cardsHtml = isTest 
@@ -191,7 +190,7 @@ async function sendEmailNotification({ items = [], emailType = 'ALERT', isTest =
             ? `${item.temp}℃ (체감 ${item.feelsLike ?? item.temp}℃)`
             : `${item.temp}℃ (습도 ${item.hum}%)`;
 
-        // 각 센서별 조치 입력 페이지로 정확히 연결되는 링크
+        // 메일 내 조치 입력 버튼 링크
         const actionLink = `${serverUrl}/?focusSensor=${encodeURIComponent(item.rawName)}`;
 
         return `

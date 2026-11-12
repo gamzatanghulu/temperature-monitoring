@@ -76,7 +76,7 @@ module.exports = function (getSensorContext) {
     }
   });
 
-  // 💡 [현장 조치 내용 등록/업데이트 API]
+  // 💡 [현장 조치 내용 등록/업데이트 API] (rawName 및 한글 센서명 모두 매칭되도록 보완)
   router.post('/action-note', async (req, res) => {
     let conn;
     try {
@@ -84,6 +84,10 @@ module.exports = function (getSensorContext) {
       if (!sensorName || !actionNote) {
         return res.status(400).json({ success: false, message: '센서명과 조치 내용은 필수입니다.' });
       }
+
+      const displayName = (SENSOR_CONFIG[sensorName] && SENSOR_CONFIG[sensorName].name)
+        ? SENSOR_CONFIG[sensorName].name
+        : sensorName;
 
       conn = await oracledb.getConnection();
       
@@ -93,12 +97,16 @@ module.exports = function (getSensorContext) {
         WHERE ID = (
           SELECT MAX(ID) 
           FROM SENSOR_LOG_HISTORY 
-          WHERE SENSOR_NAME = :sensorName 
+          WHERE SENSOR_NAME IN (:sensorName, :displayName)
             AND COLLECTED_AT >= TRUNC(SYSDATE)
         )
       `;
       
-      const result = await conn.execute(query, { actionNote, sensorName }, { autoCommit: true });
+      const result = await conn.execute(
+        query, 
+        { actionNote, sensorName, displayName }, 
+        { autoCommit: true }
+      );
       
       if (result.rowsAffected === 0) {
         const fallbackQuery = `
@@ -107,10 +115,14 @@ module.exports = function (getSensorContext) {
           WHERE ID = (
             SELECT MAX(ID) 
             FROM SENSOR_LOG_HISTORY 
-            WHERE SENSOR_NAME = :sensorName
+            WHERE SENSOR_NAME IN (:sensorName, :displayName)
           )
         `;
-        await conn.execute(fallbackQuery, { actionNote, sensorName }, { autoCommit: true });
+        await conn.execute(
+          fallbackQuery, 
+          { actionNote, sensorName, displayName }, 
+          { autoCommit: true }
+        );
       }
 
       res.json({ success: true, message: '조치 내역이 성공적으로 저장되었습니다.' });
@@ -126,7 +138,7 @@ module.exports = function (getSensorContext) {
   router.get('/excel-download', async (req, res) => {
     let conn;
     try {
-      const { type = '1', startDate, endDate } = req.query; 
+      const { type = '2', startDate, endDate } = req.query; 
 
       conn = await oracledb.getConnection();
       
@@ -236,7 +248,7 @@ module.exports = function (getSensorContext) {
       const sortedTimeKeys = Object.keys(globalTimeMap).sort().reverse();
 
       // =========================================================================
-      // 1. 첫 번째 시트: 전체 모니터링 (습도 제거, 냉동/냉장 등 긴 이름을 위해 너비 +3pt 확대)
+      // 1. 첫 번째 시트: 전체 모니터링
       // =========================================================================
       const summarySheet = workbook.addWorksheet('전체 모니터링');
       
@@ -258,9 +270,9 @@ module.exports = function (getSensorContext) {
       if (categoryGroups.length === 0) {
         summarySheet.addRow(['등록된 데이터가 없습니다.']);
       } else {
-        const sHeader1 = ['수집일시']; // 1행: 구역명
-        const sHeader2 = ['수집일시']; // 2행: 센서 상세명 (name) - 긴 이름 대응 너비 확대
-        const sHeader3 = ['수집일시']; // 3행: 측정 항목
+        const sHeader1 = ['수집일시'];
+        const sHeader2 = ['수집일시'];
+        const sHeader3 = ['수집일시'];
         
         const colColorMap = { 1: 'E2E8F0' };
         const summaryHighlightCols = new Set();
@@ -268,12 +280,7 @@ module.exports = function (getSensorContext) {
         let sColIdx = 2;
         categoryGroups.forEach(group => {
           group.sensors.forEach(s => {
-            let colSpan = 1;
-            if (s.type === 'GAS') {
-              colSpan = 3;
-            } else {
-              colSpan = 1; // 일반 및 폭염 모두 1열
-            }
+            let colSpan = (s.type === 'GAS') ? 3 : 1;
 
             sHeader1.push(group.title);
             for (let i = 1; i < colSpan; i++) sHeader1.push('');
@@ -291,7 +298,6 @@ module.exports = function (getSensorContext) {
               sHeader3.push('온도(℃)');
             }
 
-            // 기존 12에서 약 3포인트 넓힌 15로 설정 (냉동/냉장 등 긴 이름 수용)
             const columnWidth = (s.type === 'GAS') ? 13 : 15;
 
             for (let i = 0; i < colSpan; i++) {
@@ -383,7 +389,7 @@ module.exports = function (getSensorContext) {
       }
 
       // =========================================================================
-      // 2. 카테고리별 개별 시트 (기존 로직 유지)
+      // 2. 카테고리별 개별 시트 (조치사항 열 포함)
       // =========================================================================
       categorySpecs.forEach(cat => {
         const sheet = workbook.addWorksheet(cat.title);

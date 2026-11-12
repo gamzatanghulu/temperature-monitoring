@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
 const https = require('https');
+const path = require('path'); // 💡 [필수 추가] 정적 파일 경로 설정을 위한 path 모듈
 
 const { HASH_KEY, FETCH_INTERVAL_MS, SENSOR_CONFIG } = require('./config/sensorConfig');
 const { initDbPool, createTableIfNotExists, saveSensorDataToOracle, loadInitialHistoryFromOracle } = require('./config/db');
@@ -24,6 +25,10 @@ app.options(/(.*)/, cors());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
+// 💡 [핵심 수정] 메일 안의 [현장 조치 입력하기] 링크로 접속 시(/?focusSensor=...) 
+// 404 Cannot GET / 에러가 나지 않도록 index.html 및 프론트엔드 파일들이 있는 루트 폴더를 정적 서빙합니다.
+app.use(express.static(__dirname));
+
 const axiosClient = axios.create({
   httpsAgent: new https.Agent({ rejectUnauthorized: false }),
   timeout: 10000
@@ -33,6 +38,7 @@ const axiosClient = axios.create({
 const sensorStateMap = {}; 
 const lastEmailedDateMap = {}; // 센서별 당일 경보 메일 발송 날짜 추적 (YYYY-MM-DD)
 const sensorViolationStartMap = {}; // 센서별 이탈 시작 시각 기록 (1시간 지속 판단용)
+const activeAlertSentTracker = new Set(); // 💡 실제로 1시간 경고 메일이 발송된 센서 추적 (복구 메일 제어용)
 
 let sensorHistory = [];
 let cachedSensorData = {
@@ -244,6 +250,7 @@ async function fetchAndProcessData() {
               if (lastEmailedDate !== todayStr) {
                 newlyAlertedItems.push(itemObj);
                 lastEmailedDateMap[rawName] = todayStr;
+                activeAlertSentTracker.add(rawName); // 💡 실제로 1시간 경고 메일이 발송되었음을 기록
                 console.warn(`[1시간 지속 이탈 경보 메일] ${cfg.name} (${Math.round(durationMinutes)}분 경과)`);
               }
             }
@@ -255,7 +262,9 @@ async function fetchAndProcessData() {
           if (previousState === 'WARNING') {
             sensorStateMap[rawName] = 'NORMAL';
 
-            if (isMailAllowed) {
+            // 💡 [핵심] 실제로 1시간 경고 메일이 나갔던 항목에 대해서만 복구 메일 발송
+            if (isMailAllowed && activeAlertSentTracker.has(rawName)) {
+              activeAlertSentTracker.delete(rawName); // 복구되었으므로 트래커에서 제거
               newlyRecoveredItems.push(itemObj);
               console.log(`[복구 메일 대상] ${cfg.name}`);
             }
