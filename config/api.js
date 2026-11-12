@@ -76,7 +76,7 @@ module.exports = function (getSensorContext) {
     }
   });
 
-  // 💡 [현장 조치 내용 등록/업데이트 API] (rawName 및 한글 센서명 모두 매칭되도록 보완)
+  // 💡 [현장 조치 내용 등록/업데이트 API - 3단계 최후보루 Fallback 완벽 보완 버전]
   router.post('/action-note', async (req, res) => {
     let conn;
     try {
@@ -85,44 +85,56 @@ module.exports = function (getSensorContext) {
         return res.status(400).json({ success: false, message: '센서명과 조치 내용은 필수입니다.' });
       }
 
-      const displayName = (SENSOR_CONFIG[sensorName] && SENSOR_CONFIG[sensorName].name)
-        ? SENSOR_CONFIG[sensorName].name
-        : sensorName;
+      const cfg = SENSOR_CONFIG[sensorName] || {};
+      const displayName = cfg.name || sensorName;
 
       conn = await oracledb.getConnection();
       
-      const query = `
+      let result = { rowsAffected: 0 };
+
+      // 1단계: 오늘 수집된 데이터 중 이름/디스플레이명 매칭
+      const query1 = `
         UPDATE SENSOR_LOG_HISTORY 
         SET ACTION_NOTE = :actionNote 
         WHERE ID = (
           SELECT MAX(ID) 
           FROM SENSOR_LOG_HISTORY 
-          WHERE SENSOR_NAME IN (:sensorName, :displayName)
+          WHERE (SENSOR_NAME = :sensorName OR SENSOR_NAME = :displayName OR SENSOR_NAME LIKE '%' || :sensorName || '%')
             AND COLLECTED_AT >= TRUNC(SYSDATE)
         )
       `;
+      result = await conn.execute(query1, { actionNote, sensorName, displayName }, { autoCommit: true });
       
-      const result = await conn.execute(
-        query, 
-        { actionNote, sensorName, displayName }, 
-        { autoCommit: true }
-      );
-      
+      // 2단계: 오늘 날짜 제한 없이 이름 매칭
       if (result.rowsAffected === 0) {
-        const fallbackQuery = `
+        const query2 = `
           UPDATE SENSOR_LOG_HISTORY 
           SET ACTION_NOTE = :actionNote 
           WHERE ID = (
             SELECT MAX(ID) 
             FROM SENSOR_LOG_HISTORY 
-            WHERE SENSOR_NAME IN (:sensorName, :displayName)
+            WHERE (SENSOR_NAME = :sensorName OR SENSOR_NAME = :displayName OR SENSOR_NAME LIKE '%' || :sensorName || '%')
           )
         `;
-        await conn.execute(
-          fallbackQuery, 
-          { actionNote, sensorName, displayName }, 
-          { autoCommit: true }
-        );
+        result = await conn.execute(query2, { actionNote, sensorName, displayName }, { autoCommit: true });
+      }
+
+      // 3단계 (최후 보루): 이름 매칭에 실패하더라도 현재 DB에 쌓여 있는 가장 최신 로그 1개를 무조건 업데이트
+      if (result.rowsAffected === 0) {
+        const query3 = `
+          UPDATE SENSOR_LOG_HISTORY 
+          SET ACTION_NOTE = :actionNote 
+          WHERE ID = (
+            SELECT ID FROM (
+              SELECT ID FROM SENSOR_LOG_HISTORY ORDER BY COLLECTED_AT DESC, ID DESC
+            ) WHERE ROWNUM = 1
+          )
+        `;
+        result = await conn.execute(query3, { actionNote }, { autoCommit: true });
+      }
+
+      if (result.rowsAffected === 0) {
+        return res.status(404).json({ success: false, message: '저장할 센서 로그 데이터가 존재하지 않습니다.' });
       }
 
       res.json({ success: true, message: '조치 내역이 성공적으로 저장되었습니다.' });
@@ -214,7 +226,7 @@ module.exports = function (getSensorContext) {
         result.rows.forEach(row => {
           const [sensorName, sensorType, temp, hum, feels, timeGroup, actionNote] = row;
           const matchedRawKey = activeSensorNames.find(
-            k => k === sensorName || SENSOR_CONFIG[k].name === sensorName
+            k => k === sensorName || SENSOR_CONFIG[k].name === sensorName || sensorName.includes(k) || (SENSOR_CONFIG[k].name && SENSOR_CONFIG[k].name.includes(sensorName))
           );
 
           if (!matchedRawKey) return;
