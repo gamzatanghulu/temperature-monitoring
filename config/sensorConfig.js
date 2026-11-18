@@ -20,7 +20,7 @@ module.exports = {
     '슈레드실1,2라인': { name: '슈레드 1,2', zone: '현장 온열', type: 'PROD1', min: -18.0, max: 38.0, sensorId: '7084-4013', channel: 1 },
     '슈레드실3라인':   { name: '슈레드 3', zone: '현장 온열', type: 'PROD1', min: -18.0, max: 38.0, sensorId: '7084-4013', channel: 2 },
     '준비실':   { name: '준비실', zone: '현장 온열', type: 'PROD1', min: -18.0, max: 38.0, sensorId: '6893-9395'},
-    '기계실':   { name: '기계실', zone: '현장 온열', type: 'PROD1', min: -18.0, max: 38.0, sensorId: '3854-3384'},
+    '기계실':   { name: '예비품창고', zone: '현장 온열', type: 'PROD1', min: -18.0, max: 38.0, sensorId: '3854-3384'},
     'IQF':   { name: 'IQF실', zone: '현장 온열', type: 'PROD2', min: -18.0, max: 38.0, sensorId: '4283-7378'},
     '2팀천장':      { name: '2팀천장', zone: '현장 온열', type: 'PROD2', min: -18.0, max: 38.0, sensorId: '5704-7896' },
     '골드포장실':    { name: '골드포장실', zone: '현장 온열', type: 'PROD2', min: -18.0, max: 38.0, sensorId: '9318-2714' },
