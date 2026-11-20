@@ -31,7 +31,7 @@ module.exports = function (getSensorContext) {
     return {
       ...cachedData,
       feels_like_list: feelsLikeList,
-      feels_list: feelsLikeList 
+      feels_list: feelsLikeList
     };
   }
 
@@ -41,10 +41,10 @@ module.exports = function (getSensorContext) {
     const filteredHistory = getFilteredHistory(sensorHistory, range);
     const enrichedData = attachFeelsLikeData(cachedSensorData);
 
-    res.json({ 
-      ...enrichedData, 
-      history: filteredHistory, 
-      raw_configs: SENSOR_CONFIG 
+    res.json({
+      ...enrichedData,
+      history: filteredHistory,
+      raw_configs: SENSOR_CONFIG
     });
   });
 
@@ -54,20 +54,20 @@ module.exports = function (getSensorContext) {
     const filteredHistory = getFilteredHistory(sensorHistory, range);
     const enrichedData = attachFeelsLikeData(cachedSensorData);
 
-    res.json({ 
-      ...enrichedData, 
-      history: filteredHistory, 
-      raw_configs: SENSOR_CONFIG 
+    res.json({
+      ...enrichedData,
+      history: filteredHistory,
+      raw_configs: SENSOR_CONFIG
     });
   });
 
   router.post('/send-email', async (req, res) => {
     try {
       const { alertItems, isTest } = req.body;
-      await sendEmailNotification({ 
-        items: alertItems || [], 
-        emailType: 'ALERT', 
-        isTest: isTest || false 
+      await sendEmailNotification({
+        items: alertItems || [],
+        emailType: 'ALERT',
+        isTest: isTest || false
       });
       return res.json({ success: true, message: '테스트 메일 전송 완료' });
     } catch (err) {
@@ -89,7 +89,7 @@ module.exports = function (getSensorContext) {
       const displayName = cfg.name || sensorName;
 
       conn = await oracledb.getConnection();
-      
+
       let result = { rowsAffected: 0 };
 
       // 1단계: 오늘 수집된 데이터 중 이름/디스플레이명 매칭
@@ -104,7 +104,7 @@ module.exports = function (getSensorContext) {
         )
       `;
       result = await conn.execute(query1, { actionNote, sensorName, displayName }, { autoCommit: true });
-      
+
       // 2단계: 오늘 날짜 제한 없이 이름 매칭
       if (result.rowsAffected === 0) {
         const query2 = `
@@ -150,12 +150,12 @@ module.exports = function (getSensorContext) {
   router.get('/excel-download', async (req, res) => {
     let conn;
     try {
-      const { type = '2', startDate, endDate } = req.query; 
+      const { type = '2', startDate, endDate } = req.query;
 
       conn = await oracledb.getConnection();
-      
+
       let timeGroupExpr = '';
-      
+
       if (type === '1') {
         timeGroupExpr = "TO_CHAR(COLLECTED_AT - (8.5 / 24), 'YYYY-MM-DD')";
       } else if (type === '2') {
@@ -164,6 +164,7 @@ module.exports = function (getSensorContext) {
         timeGroupExpr = "TO_CHAR(COLLECTED_AT, 'YYYY-MM-DD HH24') || ':' || LPAD(FLOOR(TO_NUMBER(TO_CHAR(COLLECTED_AT, 'MI')) / 5) * 5, 2, '0')";
       }
 
+      // 집계 구간 내 마지막 조치사항 우선, 없더라도 구간 내 입력된 조치사항이 있으면 함께 fallback
       let query = `
         SELECT SENSOR_NAME, SENSOR_TYPE, 
                ROUND(AVG(TEMPERATURE), 2) AS AVG_TEMP, 
@@ -174,7 +175,10 @@ module.exports = function (getSensorContext) {
                  ELSE ROUND(AVG(FEELS_LIKE), 2)
                END AS AVG_FEELS,
                ${timeGroupExpr} AS TIME_GROUP,
-               MAX(ACTION_NOTE) KEEP (DENSE_RANK LAST ORDER BY COLLECTED_AT) AS LATEST_ACTION_NOTE
+               COALESCE(
+                 MAX(ACTION_NOTE) KEEP (DENSE_RANK LAST ORDER BY COLLECTED_AT),
+                 MAX(ACTION_NOTE)
+               ) AS LATEST_ACTION_NOTE
         FROM SENSOR_LOG_HISTORY
       `;
 
@@ -193,11 +197,11 @@ module.exports = function (getSensorContext) {
       } else {
         query += ` GROUP BY SENSOR_NAME, SENSOR_TYPE, TO_CHAR(COLLECTED_AT - (8.5 / 24), 'YYYY-MM-DD') `;
       }
-      
+
       query += ` ORDER BY TIME_GROUP DESC `;
 
       const result = await conn.execute(query, binds, { outFormat: oracledb.OUT_FORMAT_ARRAY });
-      
+
       const workbook = new ExcelJS.Workbook();
       workbook.creator = '스마트관제시스템';
 
@@ -211,6 +215,11 @@ module.exports = function (getSensorContext) {
         { key: 'GAS',      title: '가스 용기', bgColor: 'F3E8FF' }  // 연한 보라색
       ];
 
+      const catTitleMap = categorySpecs.reduce((acc, c) => {
+        acc[c.key] = c.title;
+        return acc;
+      }, {});
+
       const thinBorder = {
         top: { style: 'thin', color: { argb: 'CBD5E1' } },
         left: { style: 'thin', color: { argb: 'CBD5E1' } },
@@ -222,6 +231,8 @@ module.exports = function (getSensorContext) {
 
       // 전체 조회 데이터를 시간대별로 미리 정리 (모든 시트에서 재사용)
       const globalTimeMap = {};
+      const actionHistoryList = []; // 조치 이력 요약 시트용 목록
+
       if (result.rows && result.rows.length > 0) {
         result.rows.forEach(row => {
           const [sensorName, sensorType, temp, hum, feels, timeGroup, actionNote] = row;
@@ -248,28 +259,61 @@ module.exports = function (getSensorContext) {
             calculatedFeels = parseFloat(Number(feels).toFixed(1));
           }
 
-          globalTimeMap[displayTs][matchedRawKey] = {
+          const cleanNote = (actionNote && String(actionNote).trim()) ? String(actionNote).trim() : '';
+
+          const cellObj = {
             temp: parsedTemp !== null ? parsedTemp : '',
             hum: parsedHum !== null ? parsedHum : '',
             feels: calculatedFeels !== null ? calculatedFeels : '',
-            actionNote: actionNote || ''
+            actionNote: cleanNote
           };
+
+          globalTimeMap[displayTs][matchedRawKey] = cellObj;
+
+          // 조치사항이 있는 경우 '조치 이력' 시트용 리스트에 수집
+          if (cleanNote) {
+            let statusSummary = '';
+            if (cfg.type === 'GAS') {
+              const remStr = cellObj.temp !== '' ? `잔량 ${cellObj.temp}kg` : '';
+              const pressStr = cellObj.hum !== '' ? `압력 ${cellObj.hum}bar` : '';
+              const useStr = cellObj.feels !== '' ? `사용량 ${cellObj.feels}kg` : '';
+              statusSummary = [remStr, pressStr, useStr].filter(Boolean).join(' / ');
+            } else if (cfg.type === 'HEAT') {
+              const tStr = cellObj.temp !== '' ? `온도 ${cellObj.temp}℃` : '';
+              const hStr = cellObj.hum !== '' ? `습도 ${cellObj.hum}%` : '';
+              const fStr = cellObj.feels !== '' ? `체감 ${cellObj.feels}℃` : '';
+              statusSummary = [tStr, hStr, fStr].filter(Boolean).join(' / ');
+            } else {
+              const tStr = cellObj.temp !== '' ? `온도 ${cellObj.temp}℃` : '';
+              const hStr = cellObj.hum !== '' ? `습도 ${cellObj.hum}%` : '';
+              statusSummary = [tStr, hStr].filter(Boolean).join(' / ');
+            }
+
+            actionHistoryList.push({
+              timeKey: displayTs,
+              categoryTitle: catTitleMap[cfg.type] || cfg.type,
+              sensorName: cfg.name || matchedRawKey,
+              statusSummary,
+              actionNote: cleanNote
+            });
+          }
         });
       }
 
       const sortedTimeKeys = Object.keys(globalTimeMap).sort().reverse();
+      actionHistoryList.sort((a, b) => b.timeKey.localeCompare(a.timeKey));
 
       // =========================================================================
       // 1. 첫 번째 시트: 전체 모니터링
       // =========================================================================
       const summarySheet = workbook.addWorksheet('전체 모니터링');
-      
+
       const categoryGroups = [];
       categorySpecs.forEach(cat => {
         const sensorsInCat = activeSensorNames
           .filter(name => SENSOR_CONFIG[name].type === cat.key)
           .map(name => ({ rawName: name, ...SENSOR_CONFIG[name] }));
-        
+
         if (sensorsInCat.length > 0) {
           categoryGroups.push({
             title: cat.title,
@@ -285,7 +329,7 @@ module.exports = function (getSensorContext) {
         const sHeader1 = ['수집일시'];
         const sHeader2 = ['수집일시'];
         const sHeader3 = ['수집일시'];
-        
+
         const colColorMap = { 1: 'E2E8F0' };
         const summaryHighlightCols = new Set();
 
@@ -324,7 +368,7 @@ module.exports = function (getSensorContext) {
         const sr1 = summarySheet.addRow(sHeader1);
         const sr2 = summarySheet.addRow(sHeader2);
         const sr3 = summarySheet.addRow(sHeader3);
-        
+
         [sr1, sr2, sr3].forEach(r => r.height = 22);
 
         summarySheet.mergeCells(1, 1, 3, 1);
@@ -401,7 +445,7 @@ module.exports = function (getSensorContext) {
       }
 
       // =========================================================================
-      // 2. 카테고리별 개별 시트 (조치사항 열 포함)
+      // 2. 카테고리별 개별 시트 (조치사항 열 제거 -> 별도 '조치 이력' 시트로 분리)
       // =========================================================================
       categorySpecs.forEach(cat => {
         const sheet = workbook.addWorksheet(cat.title);
@@ -416,7 +460,7 @@ module.exports = function (getSensorContext) {
 
         const headerRow1 = ['수집일시'];
         sensorList.forEach(s => {
-          const colSpan = (s.type === 'HEAT' || s.type === 'GAS') ? 4 : 3;
+          const colSpan = (s.type === 'HEAT' || s.type === 'GAS') ? 3 : 2;
           headerRow1.push(s.name);
           for (let i = 1; i < colSpan; i++) headerRow1.push('');
         });
@@ -427,11 +471,10 @@ module.exports = function (getSensorContext) {
         const headerRow2 = ['수집일시'];
         sensorList.forEach(s => {
           if (s.type === 'GAS') {
-            headerRow2.push('잔량(kg)', '압력(bar)', '사용량(kg)', '조치사항');
+            headerRow2.push('잔량(kg)', '압력(bar)', '사용량(kg)');
           } else {
             headerRow2.push('온도(℃)', '습도(%)');
             if (s.type === 'HEAT') headerRow2.push('체감온도(℃)');
-            headerRow2.push('조치사항');
           }
         });
 
@@ -442,7 +485,7 @@ module.exports = function (getSensorContext) {
 
         let colIdx = 2;
         sensorList.forEach(s => {
-          const colSpan = (s.type === 'HEAT' || s.type === 'GAS') ? 4 : 3;
+          const colSpan = (s.type === 'HEAT' || s.type === 'GAS') ? 3 : 2;
           if (colSpan > 1) {
             sheet.mergeCells(1, colIdx, 1, colIdx + colSpan - 1);
           }
@@ -467,20 +510,17 @@ module.exports = function (getSensorContext) {
             sheet.getColumn(currentColIndex).width = 12;
             sheet.getColumn(currentColIndex + 1).width = 12;
             sheet.getColumn(currentColIndex + 2).width = 12;
-            sheet.getColumn(currentColIndex + 3).width = 20;
             highlightColIndices.add(currentColIndex + 2);
-            currentColIndex += 4;
+            currentColIndex += 3;
           } else {
             sheet.getColumn(currentColIndex).width = 11;
             sheet.getColumn(currentColIndex + 1).width = 11;
             if (s.type === 'HEAT') {
               sheet.getColumn(currentColIndex + 2).width = 13;
-              sheet.getColumn(currentColIndex + 3).width = 20;
               highlightColIndices.add(currentColIndex + 2);
-              currentColIndex += 4;
-            } else {
-              sheet.getColumn(currentColIndex + 2).width = 20;
               currentColIndex += 3;
+            } else {
+              currentColIndex += 2;
             }
           }
         });
@@ -495,14 +535,12 @@ module.exports = function (getSensorContext) {
               if (s.type === 'HEAT' || s.type === 'GAS') {
                 rowVal.push(item.feels);
               }
-              rowVal.push(item.actionNote);
             } else {
               rowVal.push('');
               rowVal.push('');
               if (s.type === 'HEAT' || s.type === 'GAS') {
                 rowVal.push('');
               }
-              rowVal.push('');
             }
           });
 
@@ -520,6 +558,62 @@ module.exports = function (getSensorContext) {
           });
         });
       });
+
+      // =========================================================================
+      // 3. 마지막 시트: 조치 이력 요약 (조치 내역만 별도 모아보기)
+      // =========================================================================
+      const historySheet = workbook.addWorksheet('조치 이력');
+      const historyHeaders = ['수집일시', '관제 구분', '센서명', '당시 수치', '조치사항'];
+      const hRow = historySheet.addRow(historyHeaders);
+      hRow.height = 25;
+
+      historySheet.getColumn(1).width = 18;
+      historySheet.getColumn(2).width = 14;
+      historySheet.getColumn(3).width = 20;
+      historySheet.getColumn(4).width = 30;
+      historySheet.getColumn(5).width = 50;
+
+      hRow.eachCell((cell) => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'E2E8F0' } };
+        cell.font = { name: '오뚜기산스 3N Medium', size: 10, bold: true };
+        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        cell.border = thinBorder;
+      });
+
+      if (actionHistoryList.length === 0) {
+        const emptyRow = historySheet.addRow(['-', '-', '-', '-', '등록된 조치 내역이 없습니다.']);
+        emptyRow.height = 24;
+        emptyRow.eachCell((cell) => {
+          cell.alignment = { vertical: 'middle', horizontal: 'center' };
+          cell.font = { name: '오뚜기산스 3N Medium', size: 10, color: { argb: '64748B' } };
+          cell.border = thinBorder;
+        });
+      } else {
+        actionHistoryList.forEach((act) => {
+          const r = historySheet.addRow([
+            act.timeKey,
+            act.categoryTitle,
+            act.sensorName,
+            act.statusSummary,
+            act.actionNote
+          ]);
+
+          const lines = Math.ceil(act.actionNote.length / 42);
+          r.height = Math.max(24, lines * 16 + 8);
+
+          r.eachCell((cell, colNumber) => {
+            cell.border = thinBorder;
+            cell.font = { name: '오뚜기산스 3N Medium', size: 10 };
+            if (colNumber === 5) {
+              cell.alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
+              cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FEF9C3' } };
+              cell.font = { name: '오뚜기산스 3N Medium', size: 10, bold: true, color: { argb: '854D0E' } };
+            } else {
+              cell.alignment = { vertical: 'middle', horizontal: 'center' };
+            }
+          });
+        });
+      }
 
       const typeNames = { '1': '일일집계(08:30기준)', '2': '시간대별집계', '3': '5분단위집계' };
       const dateStr = new Date().toISOString().slice(0, 10);

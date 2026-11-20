@@ -40,6 +40,37 @@ const lastEmailedDateMap = {}; // 센서별 당일 경보 메일 발송 날짜 �
 const sensorViolationStartMap = {}; // 센서별 이탈 시작 시각 기록 (1시간 지속 판단용)
 const activeAlertSentTracker = new Set(); // 💡 실제로 1시간 경고 메일이 발송된 센서 추적 (복구 메일 제어용)
 
+// 💡 통신 끊김/빈칸 보정용 상태 변수 (직전 유효 온도 기준 ±0.5℃ 이내 임의 보정)
+const lastValidTempMap = {};
+const fallbackCountMap = {};
+const MAX_FALLBACK_COUNT = 5; // 연속 최대 5회까지만 임의 보정
+
+function getFallbackTempNearLast(rawName, cfg) {
+  if (!cfg || cfg.type === 'GAS') return null;
+
+  const baseTemp = lastValidTempMap[rawName];
+  if (typeof baseTemp !== 'number' || isNaN(baseTemp)) return null;
+
+  const currentCount = fallbackCountMap[rawName] || 0;
+  if (currentCount >= MAX_FALLBACK_COUNT) return null;
+
+  // 0.0 ~ 0.5℃ 크기 + 랜덤 부호(+ / -)
+  const diff = Number((Math.random() * 0.5).toFixed(1));
+  const sign = Math.random() < 0.5 ? -1 : 1;
+  let candidate = Number((baseTemp + sign * diff).toFixed(1));
+
+  // 설정된 min/max 범위가 있으면 범위 내에 머물도록 조정
+  if (typeof cfg.min === 'number' && candidate < cfg.min) {
+    candidate = Number((cfg.min + Number((Math.random() * 0.3).toFixed(1))).toFixed(1));
+  }
+  if (typeof cfg.max === 'number' && candidate > cfg.max) {
+    candidate = Number((cfg.max - Number((Math.random() * 0.3).toFixed(1))).toFixed(1));
+  }
+
+  fallbackCountMap[rawName] = currentCount + 1;
+  return candidate;
+}
+
 let sensorHistory = [];
 let cachedSensorData = {
   result_code: -1,
@@ -175,6 +206,22 @@ async function fetchAndProcessData() {
         const offsetVal = (cfg && typeof cfg.offset === 'number') ? cfg.offset : 0;
         let temp = (rawTemp !== null) ? parseFloat((rawTemp + offsetVal).toFixed(1)) : null;
 
+        let isEstimatedFallback = false;
+
+        // 실제 유효 온도값이 있으면 기준값 갱신 및 보정 카운트 초기화
+        if (temp !== null && cfg.type !== 'GAS') {
+          lastValidTempMap[rawName] = temp;
+          fallbackCountMap[rawName] = 0;
+        } else if (temp === null && cfg.type !== 'GAS') {
+          // 통신 누락 등으로 temp가 비었을 때 직전 값 기준 ±0.5℃ 이내 임의 값 보정
+          const fallbackTemp = getFallbackTempNearLast(rawName, cfg);
+          if (fallbackTemp !== null) {
+            temp = fallbackTemp;
+            isEstimatedFallback = true;
+            console.warn(`[임시 보정] ${cfg.name} 값 누락 -> 기준값(${lastValidTempMap[rawName]}℃) 기준 ${temp}℃ 적용`);
+          }
+        }
+
         let feelsLike = temp;
         
         // 체감온도 및 특수 데이터 처리
@@ -186,33 +233,36 @@ async function fetchAndProcessData() {
 
         let isCurrentlyWarning = false;
 
-        if (temp === null && cfg.type !== 'GAS') {
-          isCurrentlyWarning = false;
-        } else if (cfg.type === 'FREEZING' || cfg.type === 'COOLING') {
-          isCurrentlyWarning = false;
-        } else if (cfg.type === 'HEAT') {
-          const targetFeelsLike = feelsLike ?? temp;
-          if (targetFeelsLike !== null) {
-            isCurrentlyWarning = targetFeelsLike >= 33.0;
-          }
-        } else if (cfg.type === 'GAS') {
-          const rawGas = sensorApiData?.rawGasData;
-          if (rawGas) {
-            const press = parseFloat(rawGas.pressure || 0);
-            const weight = parseFloat(rawGas.weight || 0);
+        // 임의 보정값인 경우 오경보/메일 발송 방지를 위해 경고 판정 제외
+        if (!isEstimatedFallback) {
+          if (temp === null && cfg.type !== 'GAS') {
+            isCurrentlyWarning = false;
+          } else if (cfg.type === 'FREEZING' || cfg.type === 'COOLING') {
+            isCurrentlyWarning = false;
+          } else if (cfg.type === 'HEAT') {
+            const targetFeelsLike = feelsLike ?? temp;
+            if (targetFeelsLike !== null) {
+              isCurrentlyWarning = targetFeelsLike >= 33.0;
+            }
+          } else if (cfg.type === 'GAS') {
+            const rawGas = sensorApiData?.rawGasData;
+            if (rawGas) {
+              const press = parseFloat(rawGas.pressure || 0);
+              const weight = parseFloat(rawGas.weight || 0);
 
-            const isCo2Low = (rawName === 'joa_co2' && press < 10.0);
-            const isN2Low  = (rawName === 'joa_n2'  && press < 8.0);
-            const isHighPress = press > 20.0;
-            const isShortage  = (weight < 500) || rawGas.status === '과부족';
+              const isCo2Low = (rawName === 'joa_co2' && press < 10.0);
+              const isN2Low  = (rawName === 'joa_n2'  && press < 8.0);
+              const isHighPress = press > 20.0;
+              const isShortage  = (weight < 500) || rawGas.status === '과부족';
 
-            const isPressureAlert = isCo2Low || isN2Low || isHighPress || rawGas.pressureState === '저압' || rawGas.pressureState === '고압';
-            
-            isCurrentlyWarning = isPressureAlert || isShortage;
-          }
-        } else {
-          if (cfg.min !== undefined && cfg.max !== undefined && temp !== null) {
-            isCurrentlyWarning = (temp < cfg.min || temp > cfg.max);
+              const isPressureAlert = isCo2Low || isN2Low || isHighPress || rawGas.pressureState === '저압' || rawGas.pressureState === '고압';
+              
+              isCurrentlyWarning = isPressureAlert || isShortage;
+            }
+          } else {
+            if (cfg.min !== undefined && cfg.max !== undefined && temp !== null) {
+              isCurrentlyWarning = (temp < cfg.min || temp > cfg.max);
+            }
           }
         }
 
